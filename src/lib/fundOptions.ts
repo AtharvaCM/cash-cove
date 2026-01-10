@@ -1,11 +1,8 @@
-import type { FundType } from "../types/finance";
-
-export const FUND_TYPES: Array<{ value: FundType; label: string }> = [
-  { value: "car", label: "Car down payment" },
-  { value: "land", label: "Land down payment" },
-  { value: "emergency", label: "Emergency fund" },
-  { value: "goal", label: "Other goal" },
-];
+export const FUND_TYPE_LABELS: Record<string, string> = {
+  emergency: "Emergency fund",
+  car: "Car down payment",
+  land: "Land down payment",
+};
 
 export type ContributionKind = "deposit" | "withdrawal";
 

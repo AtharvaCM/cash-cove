@@ -3,7 +3,6 @@ import {
   Button,
   Group,
   Modal,
-  Select,
   SimpleGrid,
   Stack,
   TextInput,
@@ -16,7 +15,6 @@ import {
   useAddFundMutation,
   useUpdateFundMutation,
 } from "../../features/api/apiSlice";
-import { FUND_TYPES } from "../../lib/fundOptions";
 import type { Fund } from "../../types/finance";
 
 type FundFormModalProps = {
@@ -27,7 +25,7 @@ type FundFormModalProps = {
 
 const buildInitialFundForm = (fund?: Fund | null) => ({
   name: fund?.name ?? "",
-  type: fund?.type ?? "car",
+  type: fund?.type ?? "",
   target_amount: fund ? String(fund.target_amount ?? 0) : "",
   current_amount: fund ? String(fund.current_amount ?? 0) : "",
   monthly_contribution:
@@ -95,7 +93,7 @@ export const FundFormModal = ({
     try {
       const payload = {
         name: fundForm.name.trim(),
-        type: fundForm.type,
+        type: fundForm.type.trim() ? fundForm.type.trim() : null,
         target_amount: targetAmount,
         current_amount: currentAmount,
         monthly_contribution: monthlyContribution,
@@ -134,17 +132,16 @@ export const FundFormModal = ({
           }
           required
         />
-        <Select
-          label="Fund type"
-          data={FUND_TYPES}
-          value={fundForm.type}
-          onChange={(value) =>
+        <TextInput
+          label="Label (optional)"
+          placeholder="e.g., Car down payment, Emergency, Travel fund"
+          value={fundForm.type ?? ""}
+          onChange={(event) =>
             setFundForm((prev) => ({
               ...prev,
-              type: (value ?? "car") as Fund["type"],
+              type: event.target.value,
             }))
           }
-          allowDeselect={false}
         />
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
           <TextInput

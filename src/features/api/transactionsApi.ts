@@ -204,7 +204,7 @@ export const transactionsApi = apiSlice.injectEndpoints({
           },
         };
       },
-      invalidatesTags: ["Transactions"],
+      invalidatesTags: ["Transactions", "Accounts"],
     }),
     updateTransaction: builder.mutation<Transaction, UpdateTransactionInput>({
       async queryFn({ id, tags, notes, ...input }) {
@@ -324,7 +324,7 @@ export const transactionsApi = apiSlice.injectEndpoints({
           },
         };
       },
-      invalidatesTags: ["Transactions"],
+      invalidatesTags: ["Transactions", "Accounts"],
     }),
     deleteTransaction: builder.mutation<void, DeleteByIdInput>({
       async queryFn({ id }) {
@@ -359,7 +359,7 @@ export const transactionsApi = apiSlice.injectEndpoints({
 
         return { data: undefined };
       },
-      invalidatesTags: ["Transactions"],
+      invalidatesTags: ["Transactions", "Accounts"],
     }),
     replaceTransactionTags: builder.mutation<void, TagsArgs>({
       async queryFn({ transactionId, tags }) {

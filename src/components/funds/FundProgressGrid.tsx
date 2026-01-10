@@ -2,7 +2,6 @@ import { ActionIcon, Badge, Group, Paper, Progress, SimpleGrid, Stack, Text } fr
 import dayjs from "dayjs";
 import type { Fund } from "../../types/finance";
 import { formatINR } from "../../lib/format";
-import { FUND_TYPES } from "../../lib/fundOptions";
 import { Pencil, Trash } from "lucide-react";
 
 type FundProgressGridProps = {
@@ -35,8 +34,7 @@ export const FundProgressGrid = ({
               )
             : 0;
         const remaining = fund.target_amount - fund.current_amount;
-        const typeLabel =
-          FUND_TYPES.find((item) => item.value === fund.type)?.label ?? fund.type;
+        const typeLabel = fund.type || "Goal";
 
         return (
           <Paper key={fund.id} withBorder radius="md" p="md">

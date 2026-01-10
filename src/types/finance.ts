@@ -47,12 +47,10 @@ export type Budget = {
   amount: number;
 };
 
-export type FundType = "car" | "land" | "emergency" | "goal";
-
 export type Fund = {
   id: string;
   name: string;
-  type: FundType;
+  type: string | null;
   target_amount: number;
   current_amount: number;
   monthly_contribution: number | null;

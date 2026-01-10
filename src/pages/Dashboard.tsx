@@ -1,13 +1,18 @@
 import { Group, Stack, Switch, Text } from "@mantine/core";
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { ChartsSection } from "../components/dashboard/ChartsSection";
 import { OverviewCards } from "../components/dashboard/OverviewCards";
 import { SoftCapAlerts } from "../components/dashboard/SoftCapAlerts";
 import { RecentActivityTable } from "../components/dashboard/RecentActivityTable";
+import { AccountBalances } from "../components/dashboard/AccountBalances";
 import { useDashboardData } from "../hooks/useDashboardData";
+import { useGetAccountsQuery } from "../features/api/apiSlice";
 
 export const Dashboard = () => {
   const [rollupCategories, setRollupCategories] = useState(true);
+  const [hideBalances, setHideBalances] = useState(true);
+  const { data: accounts = [], isLoading: isAccountsLoading } = useGetAccountsQuery();
   const {
     monthLabel,
     transactions,
@@ -29,6 +34,14 @@ export const Dashboard = () => {
         totalSpent={totalSpent}
         totalBudget={totalBudget}
         remaining={remaining}
+      />
+
+      <AccountBalances
+        accounts={accounts}
+        hidden={hideBalances}
+        onToggle={() => setHideBalances((prev) => !prev)}
+        loading={isAccountsLoading}
+        icon={hideBalances ? <Eye size={16} /> : <EyeOff size={16} />}
       />
 
       <Group justify="space-between" align="center" wrap="wrap" gap="xs">

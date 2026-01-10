@@ -188,7 +188,9 @@ export const FundFormModal = ({ opened, onClose, fund }: FundFormModalProps) => 
             onChange={(value) =>
               setFundForm((prev) => ({
                 ...prev,
-                target_date: value ? value.toISOString().slice(0, 10) : "",
+                target_date: value
+                  ? new Date(value).toISOString().slice(0, 10)
+                  : "",
               }))
             }
             clearable

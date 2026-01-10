@@ -1,0 +1,339 @@
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Group,
+  Modal,
+  Select,
+  SimpleGrid,
+  Stack,
+  Text,
+  Textarea,
+  TextInput,
+} from "@mantine/core";
+import { DateInput } from "@mantine/dates";
+import { useMemo, useState } from "react";
+import type { ChangeEvent, FormEvent } from "react";
+import dayjs from "dayjs";
+import {
+  useAddTransactionMutation,
+  useDeleteTransactionMutation,
+  useUpdateTransactionMutation,
+} from "../../features/api/apiSlice";
+import { formatINR } from "../../lib/format";
+import type { Category, PaymentMethod, Transaction } from "../../types/finance";
+
+type TransactionFormModalProps = {
+  opened: boolean;
+  onClose: () => void;
+  transaction?: Transaction | null;
+  categories: Category[];
+  paymentMethods: PaymentMethod[];
+};
+
+const buildInitialForm = (transaction?: Transaction | null) => ({
+  type: transaction?.type ?? "expense",
+  date: transaction?.date ?? dayjs().format("YYYY-MM-DD"),
+  amount: transaction ? String(transaction.amount) : "",
+  category_id: transaction?.category_id ?? "",
+  payment_method_id: transaction?.payment_method_id ?? "",
+  notes: transaction?.notes ?? "",
+  tags: transaction?.tags?.length
+    ? transaction.tags.map((tag) => tag.name).join(", ")
+    : "",
+  is_recurring: transaction?.is_recurring ?? false,
+  is_transfer: transaction?.is_transfer ?? false,
+});
+
+export const TransactionFormModal = ({
+  opened,
+  onClose,
+  transaction,
+  categories,
+  paymentMethods,
+}: TransactionFormModalProps) => {
+  const mode = transaction ? "edit" : "create";
+  const [form, setForm] = useState(() => buildInitialForm(transaction));
+  const [error, setError] = useState<string | null>(null);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const [addTransaction, { isLoading: isSaving }] = useAddTransactionMutation();
+  const [updateTransaction, { isLoading: isUpdating }] =
+    useUpdateTransactionMutation();
+  const [deleteTransaction, { isLoading: isDeleting }] =
+    useDeleteTransactionMutation();
+
+  const categoryMap = useMemo(
+    () => new Map(categories.map((category) => [category.id, category.name])),
+    [categories]
+  );
+  const categoryOptions = useMemo(
+    () =>
+      categories.map((category) => ({
+        value: category.id,
+        label: category.name,
+      })),
+    [categories]
+  );
+  const paymentOptions = useMemo(
+    () =>
+      paymentMethods.map((method) => ({
+        value: method.id,
+        label: method.name,
+      })),
+    [paymentMethods]
+  );
+
+  const handleChange = (
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = event.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setError(null);
+
+    if (!form.amount || Number.isNaN(Number(form.amount))) {
+      setError("Enter a valid amount.");
+      return;
+    }
+
+    try {
+      const payload = {
+        type: form.type,
+        date: form.date,
+        amount: Number(form.amount),
+        category_id: form.category_id || null,
+        payment_method_id: form.payment_method_id || null,
+        notes: form.notes.trim() ? form.notes.trim() : null,
+        tags: form.tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean),
+        is_transfer: form.is_transfer,
+        is_recurring: form.is_recurring,
+      };
+
+      if (transaction?.id) {
+        await updateTransaction({
+          id: transaction.id,
+          ...payload,
+        }).unwrap();
+      } else {
+        await addTransaction(payload).unwrap();
+      }
+
+      onClose();
+    } catch {
+      setError(
+        mode === "edit"
+          ? "Unable to update the transaction."
+          : "Unable to save the transaction."
+      );
+    }
+  };
+
+  const handleOpenDelete = () => {
+    if (!transaction) {
+      return;
+    }
+    setDeleteError(null);
+    setIsDeleteOpen(true);
+  };
+
+  const handleCloseDelete = () => {
+    setIsDeleteOpen(false);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!transaction) {
+      return;
+    }
+
+    try {
+      await deleteTransaction({ id: transaction.id }).unwrap();
+      setIsDeleteOpen(false);
+      onClose();
+    } catch {
+      setDeleteError("Unable to delete the transaction.");
+    }
+  };
+
+  return (
+    <>
+      <Modal
+        opened={opened}
+        onClose={onClose}
+        title={mode === "edit" ? "Edit transaction" : "Add transaction"}
+        size="lg"
+      >
+        <Stack component="form" gap="sm" onSubmit={handleSubmit}>
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+            <Select
+              label="Type"
+              data={[
+                { value: "expense", label: "Expense" },
+                { value: "income", label: "Income" },
+              ]}
+              value={form.type}
+              onChange={(value) =>
+                setForm((prev) => ({
+                  ...prev,
+                  type: (value ?? "expense") as "expense" | "income",
+                }))
+              }
+              allowDeselect={false}
+            />
+            <DateInput
+              label="Date"
+              value={dayjs(form.date).toDate()}
+              onChange={(value) =>
+                value &&
+                setForm((prev) => ({
+                  ...prev,
+                  date: dayjs(value).format("YYYY-MM-DD"),
+                }))
+              }
+              required
+            />
+          </SimpleGrid>
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+            <TextInput
+              label="Amount"
+              type="number"
+              name="amount"
+              value={form.amount}
+              onChange={handleChange}
+              placeholder="0"
+              min="0"
+              step="0.01"
+              required
+            />
+            <Select
+              label="Category"
+              data={categoryOptions}
+              value={form.category_id || null}
+              onChange={(value) =>
+                setForm((prev) => ({ ...prev, category_id: value ?? "" }))
+              }
+              placeholder="Select"
+              clearable
+            />
+          </SimpleGrid>
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+            <Select
+              label="Payment"
+              data={paymentOptions}
+              value={form.payment_method_id || null}
+              onChange={(value) =>
+                setForm((prev) => ({ ...prev, payment_method_id: value ?? "" }))
+              }
+              placeholder="Select"
+              clearable
+            />
+            <TextInput
+              label="Tags"
+              name="tags"
+              value={form.tags}
+              onChange={handleChange}
+              placeholder="food, weekend, work"
+            />
+          </SimpleGrid>
+          <Checkbox
+            label="Exclude from budgets/income (transfer, reimbursement, internal move)"
+            checked={form.is_transfer}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                is_transfer: event.currentTarget.checked,
+              }))
+            }
+          />
+          <Textarea
+            label="Notes"
+            name="notes"
+            value={form.notes}
+            onChange={handleChange}
+            placeholder="Optional details"
+            minRows={2}
+          />
+          <Checkbox
+            label="Mark as recurring (monthly)"
+            checked={form.is_recurring}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                is_recurring: event.currentTarget.checked,
+              }))
+            }
+          />
+          {error ? (
+            <Alert color="red" variant="light">
+              {error}
+            </Alert>
+          ) : null}
+          <Group justify="flex-end">
+            <Button variant="subtle" color="gray" onClick={onClose}>
+              Cancel
+            </Button>
+            {mode === "edit" ? (
+              <Button variant="light" color="red" onClick={handleOpenDelete}>
+                Delete
+              </Button>
+            ) : null}
+            <Button
+              type="submit"
+              loading={isSaving || isUpdating}
+              color="green"
+            >
+              {mode === "edit" ? "Save changes" : "Save transaction"}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={isDeleteOpen}
+        onClose={handleCloseDelete}
+        title="Delete transaction"
+        size="sm"
+      >
+        <Stack gap="sm">
+          <Text size="sm">
+            Delete the{" "}
+            <Text component="span" fw={600}>
+              {formatINR(transaction?.amount ?? 0)}
+            </Text>{" "}
+            {transaction?.type === "expense" ? "expense" : "income"} from{" "}
+            <Text component="span" fw={600}>
+              {transaction?.category_id
+                ? categoryMap.get(transaction.category_id) ?? "this category"
+                : "Uncategorized"}
+            </Text>
+            ?
+          </Text>
+          {deleteError ? (
+            <Alert color="red" variant="light">
+              {deleteError}
+            </Alert>
+          ) : null}
+          <Group justify="flex-end">
+            <Button variant="subtle" color="gray" onClick={handleCloseDelete}>
+              Cancel
+            </Button>
+            <Button
+              color="red"
+              loading={isDeleting}
+              onClick={handleConfirmDelete}
+            >
+              Delete transaction
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+    </>
+  );
+};

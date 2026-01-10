@@ -1,0 +1,127 @@
+import dayjs from "dayjs";
+import type { Budget, Category, Transaction } from "../types/finance";
+
+export type PieDatum = { name: string; value: number };
+export type DailyDatum = { day: string; value: number };
+
+export type DashboardMetrics = {
+  totalSpent: number;
+  totalBudget: number;
+  categoryTotals: Map<string, number>;
+  dailyTotals: Map<string, number>;
+  categoryBudgets: Map<string, number>;
+  overallBudget: number | null;
+};
+
+export type BudgetWarning = {
+  label: string;
+  ratio: number;
+  spent: number;
+  budget: number;
+};
+
+export const buildCategoryMap = (categories: Category[]) =>
+  new Map(categories.map((category) => [category.id, category.name]));
+
+export const calculateDashboardMetrics = (
+  transactions: Transaction[],
+  budgets: Budget[]
+): DashboardMetrics => {
+  const totals = new Map<string, number>();
+  const daily = new Map<string, number>();
+  let spent = 0;
+
+  transactions
+    .filter((tx) => tx.type === "expense" && !tx.is_transfer)
+    .forEach((tx) => {
+      spent += tx.amount;
+      if (tx.category_id) {
+        totals.set(tx.category_id, (totals.get(tx.category_id) ?? 0) + tx.amount);
+      }
+      const dayKey = dayjs(tx.date).format("DD MMM");
+      daily.set(dayKey, (daily.get(dayKey) ?? 0) + tx.amount);
+    });
+
+  const overall = budgets.find((budget) => !budget.category_id)?.amount ?? null;
+  const budgetMap = new Map<string, number>();
+  budgets
+    .filter((budget) => budget.category_id)
+    .forEach((budget) => {
+      budgetMap.set(budget.category_id ?? "", budget.amount);
+    });
+
+  const budgetTotal =
+    overall ?? Array.from(budgetMap.values()).reduce((sum, value) => sum + value, 0);
+
+  return {
+    totalSpent: spent,
+    totalBudget: budgetTotal,
+    categoryTotals: totals,
+    dailyTotals: daily,
+    categoryBudgets: budgetMap,
+    overallBudget: overall,
+  };
+};
+
+export const buildPieData = (
+  categoryTotals: Map<string, number>,
+  categoryMap: Map<string, string>
+): PieDatum[] =>
+  Array.from(categoryTotals.entries()).map(([id, value]) => ({
+    name: categoryMap.get(id) ?? "Uncategorized",
+    value,
+  }));
+
+export const buildDailyData = (dailyTotals: Map<string, number>): DailyDatum[] =>
+  Array.from(dailyTotals.entries()).map(([day, value]) => ({
+    day,
+    value,
+  }));
+
+export const buildBudgetWarnings = ({
+  overallBudget,
+  totalSpent,
+  categoryBudgets,
+  categoryTotals,
+  categoryMap,
+  threshold = 0.8,
+}: {
+  overallBudget: number | null;
+  totalSpent: number;
+  categoryBudgets: Map<string, number>;
+  categoryTotals: Map<string, number>;
+  categoryMap: Map<string, string>;
+  threshold?: number;
+}): BudgetWarning[] => {
+  const items: BudgetWarning[] = [];
+
+  if (overallBudget && overallBudget > 0) {
+    const ratio = totalSpent / overallBudget;
+    if (ratio >= threshold) {
+      items.push({
+        label: "Overall budget",
+        ratio,
+        spent: totalSpent,
+        budget: overallBudget,
+      });
+    }
+  }
+
+  categoryBudgets.forEach((budget, categoryId) => {
+    if (budget <= 0) {
+      return;
+    }
+    const spent = categoryTotals.get(categoryId) ?? 0;
+    const ratio = spent / budget;
+    if (ratio >= threshold) {
+      items.push({
+        label: categoryMap.get(categoryId) ?? "Uncategorized",
+        ratio,
+        spent,
+        budget,
+      });
+    }
+  });
+
+  return items.sort((a, b) => b.ratio - a.ratio);
+};

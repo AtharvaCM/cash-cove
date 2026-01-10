@@ -20,48 +20,53 @@ export const SoftCapAlerts = ({ warnings, hasBudgets }: SoftCapAlertsProps) => (
         {warnings.length} active
       </Badge>
     </Group>
-    {hasBudgets ? (
-      warnings.length === 0 ? (
-        <Text size="sm" c="dimmed">
-          All clear. No caps near limit yet.
-        </Text>
-      ) : (
-        <Stack gap="sm">
-          {warnings.map((warning) => {
-            const over = warning.ratio >= 1;
-            const percent = Math.round(warning.ratio * 100);
-            const delta = Math.abs(warning.budget - warning.spent);
-
-            return (
-              <Paper
-                key={warning.label}
-                withBorder
-                radius="md"
-                p="sm"
-                style={{ background: "var(--surface-alt)" }}
-              >
-                <Group justify="space-between" align="center" wrap="nowrap">
-                  <Stack gap={2}>
-                    <Text size="sm" fw={600}>
-                      {warning.label}
-                    </Text>
-                    <Text size="xs" c="dimmed">
-                      {formatINR(warning.spent)} of {formatINR(warning.budget)}
-                    </Text>
-                  </Stack>
-                  <Text size="sm" fw={600} c={over ? "red.6" : "brand.6"}>
-                    {over ? `${formatINR(delta)} over` : `${percent}% used`}
-                  </Text>
-                </Group>
-              </Paper>
-            );
-          })}
-        </Stack>
-      )
-    ) : (
+    {!hasBudgets && (
       <Text size="sm" c="dimmed">
         Set budgets to activate alerts.
       </Text>
+    )}
+    {hasBudgets && warnings.length === 0 && (
+      <Text size="sm" c="dimmed">
+        All clear. No caps near limit yet.
+      </Text>
+    )}
+    {hasBudgets && warnings.length > 0 && (
+      <Stack gap="sm">
+        {warnings.map((warning) => {
+          const over = warning.spent > warning.budget;
+          const atLimit = !over && Math.abs(warning.budget - warning.spent) < 0.01;
+          const percent = Math.round(warning.ratio * 100);
+          const delta = Math.max(0, warning.spent - warning.budget);
+
+          return (
+            <Paper
+              key={warning.label}
+              withBorder
+              radius="md"
+              p="sm"
+              style={{ background: "var(--surface-alt)" }}
+            >
+              <Group justify="space-between" align="center" wrap="nowrap">
+                <Stack gap={2}>
+                  <Text size="sm" fw={600}>
+                    {warning.label}
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    {formatINR(warning.spent)} of {formatINR(warning.budget)}
+                  </Text>
+                </Stack>
+                <Text size="sm" fw={600} c={over ? "red.6" : "brand.6"}>
+                  {over
+                    ? `${formatINR(delta)} over`
+                    : atLimit
+                      ? "At limit"
+                      : `${percent}% used`}
+                </Text>
+              </Group>
+            </Paper>
+          );
+        })}
+      </Stack>
     )}
   </Paper>
 );

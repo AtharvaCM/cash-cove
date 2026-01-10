@@ -31,8 +31,8 @@ export const Dashboard = () => {
         remaining={remaining}
       />
 
-      <Group justify="space-between" align="center">
-        <Text size="sm" c="dimmed">
+      <Group justify="space-between" align="center" wrap="wrap" gap="xs">
+        <Text size="sm" c="dimmed" maw={{ base: "100%", sm: "70%" }}>
           Charts show subcategories rolled into their parent when enabled.
         </Text>
         <Switch

@@ -13,6 +13,7 @@ import {
   Title,
   Tooltip,
 } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import {
   LayoutGrid,
   TrendingUp,
@@ -48,13 +49,15 @@ export const AppLayout = () => {
     }
   });
   const [isSidebarHovering, setIsSidebarHovering] = useState(false);
+  const isMobile = useMediaQuery("(max-width: 900px)");
   const isNavExpanded = useMemo(
-    () => !isCollapsed || isSidebarHovering,
-    [isCollapsed, isSidebarHovering]
+    () => isMobile || !isCollapsed || isSidebarHovering,
+    [isCollapsed, isSidebarHovering, isMobile]
   );
   const sidebarWidth = useMemo(
-    () => (isCollapsed ? (isSidebarHovering ? 240 : 76) : 260),
-    [isCollapsed, isSidebarHovering]
+    () =>
+      isMobile ? "100%" : isCollapsed ? (isSidebarHovering ? 240 : 76) : 260,
+    [isCollapsed, isSidebarHovering, isMobile]
   );
   const user = useAppSelector((state) => state.auth.user);
   const dispatch = useAppDispatch();
@@ -78,7 +81,8 @@ export const AppLayout = () => {
   const title = titleMap[location.pathname] ?? "CashCove";
   const shellClassName = `app-shell${isCollapsed ? " collapsed" : ""}`;
   const shellStyle = {
-    gridTemplateColumns: `${sidebarWidth}px 1fr`,
+    gridTemplateColumns: isMobile ? "1fr" : `${sidebarWidth}px 1fr`,
+    gridTemplateRows: isMobile ? "auto 1fr" : undefined,
     transition: "grid-template-columns 200ms ease",
   };
 
@@ -117,8 +121,10 @@ export const AppLayout = () => {
     >
       <aside
         className="sidebar"
-        onMouseEnter={() => isCollapsed && setIsSidebarHovering(true)}
-        onMouseLeave={() => setIsSidebarHovering(false)}
+        onMouseEnter={() =>
+          !isMobile && isCollapsed && setIsSidebarHovering(true)
+        }
+        onMouseLeave={() => !isMobile && setIsSidebarHovering(false)}
         style={{ width: "100%", transition: "width 200ms ease" }}
       >
         <div className="sidebar-header">
@@ -131,7 +137,7 @@ export const AppLayout = () => {
                 </div>
               ) : null}
             </Group>
-            {isNavExpanded ? (
+            {isNavExpanded && !isMobile ? (
               <ActionIcon
                 variant="subtle"
                 color="gray"

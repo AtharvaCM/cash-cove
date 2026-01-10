@@ -36,8 +36,8 @@ export const ChartsSection = ({ pieData, dailyData }: ChartsSectionProps) => (
           No expenses logged yet.
         </Text>
       ) : (
-        <Group align="flex-start" wrap="wrap" gap="md">
-          <div style={{ flex: "1 1 280px", minWidth: 240, maxWidth: 360 }}>
+        <Group align="flex-start" wrap="wrap" gap="md" style={{ width: "100%" }}>
+          <div style={{ flex: "1 1 280px", minWidth: 0, maxWidth: "100%" }}>
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie
@@ -49,7 +49,7 @@ export const ChartsSection = ({ pieData, dailyData }: ChartsSectionProps) => (
                 >
                   {pieData.map((entry, index) => (
                     <Cell
-                      key={`cell-${entry.name}`}
+                      key={`cell-${index}-${entry.name}`}
                       fill={
                         chartPalette.categorical[
                           index % chartPalette.categorical.length
@@ -66,14 +66,14 @@ export const ChartsSection = ({ pieData, dailyData }: ChartsSectionProps) => (
             gap={8}
             style={{
               flex: "1 1 220px",
-              minWidth: 200,
-              maxWidth: 320,
+              minWidth: 0,
+              maxWidth: "100%",
             }}
           >
             {pieData.slice(0, 8).map((entry, index) => (
               <Group
                 gap={10}
-                key={entry.name}
+                key={`${entry.name}-${index}`}
                 align="center"
                 justify="flex-start"
               >

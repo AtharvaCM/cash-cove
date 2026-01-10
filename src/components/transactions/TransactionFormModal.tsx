@@ -12,7 +12,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import dayjs from "dayjs";
 import {
@@ -65,6 +65,7 @@ export const TransactionFormModal = ({
   const [error, setError] = useState<string | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [paymentTouched, setPaymentTouched] = useState(false);
 
   const [addTransaction, { isLoading: isSaving }] = useAddTransactionMutation();
   const [updateTransaction, { isLoading: isUpdating }] =
@@ -100,12 +101,20 @@ export const TransactionFormModal = ({
       })),
     [accounts]
   );
-
-  useEffect(() => {
-    if (!form.account_id && accounts.length > 0) {
-      setForm((prev) => ({ ...prev, account_id: accounts[0].id }));
-    }
-  }, [accounts, form.account_id]);
+  const defaultCardPaymentId = useMemo(() => {
+    const match = paymentMethods.find((pm) => pm.name.toLowerCase().includes("card"));
+    return match?.id ?? null;
+  }, [paymentMethods]);
+  const defaultAccountId = accounts[0]?.id ?? "";
+  const effectiveAccountId = form.account_id || defaultAccountId;
+  const accountForDefault = accounts.find((acc) => acc.id === effectiveAccountId);
+  const shouldDefaultPayment =
+    !form.payment_method_id &&
+    !paymentTouched &&
+    accountForDefault?.type === "card" &&
+    defaultCardPaymentId;
+  const effectivePaymentMethodId =
+    form.payment_method_id || (shouldDefaultPayment ? defaultCardPaymentId : "");
 
   const handleChange = (
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -129,8 +138,8 @@ export const TransactionFormModal = ({
         date: form.date,
         amount: Number(form.amount),
         category_id: form.category_id || null,
-        payment_method_id: form.payment_method_id || null,
-        account_id: form.account_id || null,
+        payment_method_id: effectivePaymentMethodId || null,
+        account_id: effectiveAccountId || null,
         notes: form.notes.trim() ? form.notes.trim() : null,
         tags: form.tags
           .split(",")
@@ -250,7 +259,7 @@ export const TransactionFormModal = ({
             <Select
               label="Account (bank/card/wallet)"
               data={accountOptions}
-              value={form.account_id || null}
+              value={effectiveAccountId || null}
               onChange={(value) =>
                 setForm((prev) => ({ ...prev, account_id: value ?? "" }))
               }
@@ -262,12 +271,14 @@ export const TransactionFormModal = ({
             <Select
               label="Payment method (channel)"
               data={paymentOptions}
-              value={form.payment_method_id || null}
-              onChange={(value) =>
-                setForm((prev) => ({ ...prev, payment_method_id: value ?? "" }))
-              }
+              value={effectivePaymentMethodId || null}
+              onChange={(value) => {
+                setPaymentTouched(true);
+                setForm((prev) => ({ ...prev, payment_method_id: value ?? "" }));
+              }}
               placeholder="e.g., UPI, POS, Cash"
               clearable
+              onDropdownOpen={() => setPaymentTouched(true)}
             />
           </SimpleGrid>
           <TextInput

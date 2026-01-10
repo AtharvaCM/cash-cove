@@ -1,5 +1,6 @@
 import { Group, Stack, Switch, Text } from "@mantine/core";
 import { useMemo, useState } from "react";
+import dayjs from "dayjs";
 import { Eye, EyeOff } from "lucide-react";
 import { ChartsSection } from "../components/dashboard/ChartsSection";
 import { OverviewCards } from "../components/dashboard/OverviewCards";
@@ -8,6 +9,7 @@ import { RecentActivityTable } from "../components/dashboard/RecentActivityTable
 import { AccountBalances } from "../components/dashboard/AccountBalances";
 import { CoverageCard } from "../components/dashboard/CoverageCard";
 import { NetCashflowCard } from "../components/dashboard/NetCashflowCard";
+import { ForecastCard } from "../components/dashboard/ForecastCard";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { useGetAccountsQuery } from "../features/api/apiSlice";
 
@@ -42,6 +44,19 @@ export const Dashboard = () => {
       .filter((tx) => tx.type === "expense" && !tx.is_transfer)
       .reduce((sum, tx) => sum + tx.amount, 0);
     return { incomeTotal: income, expenseTotal: expense };
+  }, [transactions]);
+  const avgDailySpend = useMemo(() => {
+    const days = Math.max(1, Math.min(30, dayjs().date()));
+    return expenseTotal / days;
+  }, [expenseTotal]);
+  const { recurringIncome, recurringExpense } = useMemo(() => {
+    const income = transactions
+      .filter((tx) => tx.is_recurring && tx.type === "income" && !tx.is_transfer)
+      .reduce((sum, tx) => sum + tx.amount, 0);
+    const expense = transactions
+      .filter((tx) => tx.is_recurring && tx.type === "expense" && !tx.is_transfer)
+      .reduce((sum, tx) => sum + tx.amount, 0);
+    return { recurringIncome: income, recurringExpense: expense };
   }, [transactions]);
   return (
     <Stack gap="lg">
@@ -78,6 +93,13 @@ export const Dashboard = () => {
         <NetCashflowCard
           income={incomeTotal}
           expense={expenseTotal}
+          style={{ flex: "1 1 320px" }}
+        />
+        <ForecastCard
+          cashOnHand={cashOnHand}
+          avgDailySpend={avgDailySpend}
+          recurringIncome={recurringIncome}
+          recurringExpense={recurringExpense}
           style={{ flex: "1 1 320px" }}
         />
       </Group>

@@ -1,5 +1,5 @@
 import { Button, Divider, Group, Modal, Stack } from "@mantine/core";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { useAddTransactionMutation } from "../../features/api/apiSlice";
 import {
@@ -182,6 +182,49 @@ export const TransactionImportModal = ({
     setFailedRows([]);
   };
 
+  const loadPreset = () => {
+    try {
+      const raw = localStorage.getItem("cashcove:importPreset");
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        mappingOverrides: Partial<CsvMapping>;
+        defaults: {
+          category: string;
+          payment: string;
+          account: string;
+          type: "expense" | "income";
+          recurring: boolean;
+        };
+      };
+      setImportMappingOverrides(parsed.mappingOverrides ?? {});
+      setImportDefaultCategory(parsed.defaults.category ?? "");
+      setImportDefaultPayment(parsed.defaults.payment ?? "");
+      setImportDefaultAccount(parsed.defaults.account ?? "");
+      setImportDefaultType(parsed.defaults.type ?? "expense");
+      setImportRecurring(parsed.defaults.recurring ?? false);
+    } catch {
+      // ignore preset load errors
+    }
+  };
+
+  const savePreset = () => {
+    try {
+      const payload = {
+        mappingOverrides: importMappingOverrides,
+        defaults: {
+          category: importDefaultCategory,
+          payment: importDefaultPayment,
+          account: importDefaultAccount,
+          type: importDefaultType,
+          recurring: importRecurring,
+        },
+      };
+      localStorage.setItem("cashcove:importPreset", JSON.stringify(payload));
+    } catch {
+      // ignore save errors
+    }
+  };
+
   const resetExportState = () => {
     setHasExportedErrors(false);
   };
@@ -215,6 +258,12 @@ export const TransactionImportModal = ({
     resetImportState();
     onClose();
   };
+
+  useEffect(() => {
+    if (opened) {
+      loadPreset();
+    }
+  }, [opened]);
 
   const handleImportFileChange = (file: File | null) => {
     setImportFile(file);
@@ -335,6 +384,7 @@ export const TransactionImportModal = ({
 
     const result = await importRows(parsedImport.validRows);
     if (result.failed === 0 && result.success > 0) {
+      savePreset();
       handleClose();
     }
   };

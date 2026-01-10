@@ -21,6 +21,7 @@ import {
 import type { Account } from "../../types/finance";
 import { ConfirmDeleteModal } from "./ConfirmDeleteModal";
 import { SectionCard } from "./SectionCard";
+import { TransferModal } from "./TransferModal";
 
 const ACCOUNT_TYPES = [
   { value: "bank", label: "Bank (incl. debit cards)" },
@@ -56,6 +57,7 @@ export const AccountManager = () => {
     amount: "",
   });
   const [payError, setPayError] = useState<string | null>(null);
+  const [transferOpen, setTransferOpen] = useState(false);
 
   const openCreate = () => {
     setMode("create");
@@ -176,6 +178,14 @@ export const AccountManager = () => {
             >
               Pay card
             </Button>
+            <Button
+              onClick={() => setTransferOpen(true)}
+              leftSection={<Pencil size={16} strokeWidth={2} />}
+              variant="light"
+              disabled={accounts.length < 2}
+            >
+              Transfer
+            </Button>
             <Button onClick={openCreate} leftSection={<Plus size={16} strokeWidth={2} />}>
               New account
             </Button>
@@ -293,6 +303,12 @@ export const AccountManager = () => {
         loading={isDeleting}
         title="Delete account?"
         message="Existing transactions using this account will lose that link."
+      />
+
+      <TransferModal
+        opened={transferOpen}
+        onClose={() => setTransferOpen(false)}
+        accounts={accounts}
       />
 
       <Modal

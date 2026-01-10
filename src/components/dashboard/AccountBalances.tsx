@@ -8,6 +8,7 @@ type AccountBalancesProps = {
   onToggle: () => void;
   loading?: boolean;
   icon: React.ReactNode;
+  style?: React.CSSProperties;
 };
 
 const maskValue = (value: number, hidden: boolean) =>
@@ -19,11 +20,18 @@ export const AccountBalances = ({
   onToggle,
   loading = false,
   icon,
+  style,
 }: AccountBalancesProps) => {
   const total = accounts.reduce((sum, account) => sum + (account.current_balance ?? 0), 0);
 
   return (
-    <Paper withBorder shadow="sm" radius="lg" p="md">
+    <Paper
+      withBorder
+      shadow="sm"
+      radius="lg"
+      p="md"
+      style={{ display: "flex", flexDirection: "column", ...style }}
+    >
       <Group justify="space-between" align="center" mb="xs">
         <Stack gap={4}>
           <Title order={4}>Accounts</Title>

@@ -12,7 +12,8 @@ import { useGetAccountsQuery } from "../features/api/apiSlice";
 export const Dashboard = () => {
   const [rollupCategories, setRollupCategories] = useState(true);
   const [hideBalances, setHideBalances] = useState(true);
-  const { data: accounts = [], isLoading: isAccountsLoading } = useGetAccountsQuery();
+  const { data: accounts = [], isLoading: isAccountsLoading } =
+    useGetAccountsQuery();
   const {
     monthLabel,
     transactions,
@@ -36,14 +37,21 @@ export const Dashboard = () => {
         remaining={remaining}
       />
 
-      <AccountBalances
-        accounts={accounts}
-        hidden={hideBalances}
-        onToggle={() => setHideBalances((prev) => !prev)}
-        loading={isAccountsLoading}
-        icon={hideBalances ? <Eye size={16} /> : <EyeOff size={16} />}
-      />
-
+      <Group align="stretch" grow wrap="wrap" gap="md">
+        <AccountBalances
+          accounts={accounts}
+          hidden={hideBalances}
+          onToggle={() => setHideBalances((prev) => !prev)}
+          loading={isAccountsLoading}
+          icon={hideBalances ? <Eye size={16} /> : <EyeOff size={16} />}
+          style={{ flex: "1 1 320px" }}
+        />
+        <SoftCapAlerts
+          warnings={warnings}
+          hasBudgets={hasBudgets}
+          style={{ flex: "1 1 320px" }}
+        />
+      </Group>
       <Group justify="space-between" align="center" wrap="wrap" gap="xs">
         <Text size="sm" c="dimmed" maw={{ base: "100%", sm: "70%" }}>
           Charts show subcategories rolled into their parent when enabled.
@@ -56,8 +64,6 @@ export const Dashboard = () => {
       </Group>
 
       <ChartsSection pieData={pieData} dailyData={dailyData} />
-
-      <SoftCapAlerts warnings={warnings} hasBudgets={hasBudgets} />
 
       <RecentActivityTable
         transactions={transactions}

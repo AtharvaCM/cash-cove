@@ -5,10 +5,17 @@ import type { BudgetWarning } from "../../lib/dashboard";
 type SoftCapAlertsProps = {
   warnings: BudgetWarning[];
   hasBudgets: boolean;
+  style?: React.CSSProperties;
 };
 
-export const SoftCapAlerts = ({ warnings, hasBudgets }: SoftCapAlertsProps) => (
-  <Paper withBorder shadow="sm" radius="lg" p="md">
+export const SoftCapAlerts = ({ warnings, hasBudgets, style }: SoftCapAlertsProps) => (
+  <Paper
+    withBorder
+    shadow="sm"
+    radius="lg"
+    p="md"
+    style={{ display: "flex", flexDirection: "column", ...style }}
+  >
     <Group justify="space-between" align="center" mb="md">
       <Stack gap={2}>
         <Title order={4}>Soft-cap alerts</Title>

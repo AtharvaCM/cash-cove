@@ -32,6 +32,10 @@ export const Transactions = () => {
     () => new Map(categories.map((category) => [category.id, category.name])),
     [categories]
   );
+  const paymentMap = useMemo(
+    () => new Map(paymentMethods.map((pm) => [pm.id, pm.name])),
+    [paymentMethods]
+  );
 
   const rows = useMemo(
     () =>
@@ -39,19 +43,21 @@ export const Transactions = () => {
         id: tx.id,
         date: dayjs(tx.date).format("DD MMM"),
         category: categoryMap.get(tx.category_id ?? "") ?? "-",
+        payment: paymentMap.get(tx.payment_method_id ?? "") ?? "-",
         notes: tx.notes?.trim() || "-",
         tags: tx.tags?.length ? tx.tags.map((tag) => tag.name).join(", ") : "-",
         amount: tx.amount,
         type: tx.type,
         flag: tx.is_transfer ? "Transfer" : "",
       })),
-    [transactions, categoryMap]
+    [transactions, categoryMap, paymentMap]
   );
 
   const columns = useMemo<ColDef<(typeof rows)[number]>[]>(
     () => [
       { headerName: "Date", field: "date", maxWidth: 120 },
       { headerName: "Category", field: "category", flex: 1.2 },
+      { headerName: "Payment", field: "payment", flex: 1 },
       {
         headerName: "Flag",
         field: "flag",

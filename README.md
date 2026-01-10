@@ -1,4 +1,4 @@
-# Sanchay
+# CashCove
 
 Personal finance cockpit for budgets, expenses, and goal tracking (Phase 1: budget + expenses).
 

@@ -9,7 +9,7 @@ export const NotFound = () => (
         </Text>
         <Title order={3}>Page not found</Title>
         <Text size="sm" c="dimmed">
-          That page does not exist in Sanchay.
+          That page does not exist in CashCove.
         </Text>
       </Stack>
     </Paper>

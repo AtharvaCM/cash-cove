@@ -48,7 +48,7 @@ export const UnlockScreen = ({ isFirstTime }: { isFirstTime: boolean }) => {
             Encrypted vault
           </Text>
           <Title order={2}>
-            {isFirstTime ? "Create passphrase" : "Unlock Sanchay"}
+            {isFirstTime ? "Create passphrase" : "Unlock CashCove"}
           </Title>
           <Text size="sm" c="dimmed">
             {isFirstTime

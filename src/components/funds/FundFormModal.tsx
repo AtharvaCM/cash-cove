@@ -31,14 +31,19 @@ const buildInitialFundForm = (fund?: Fund | null) => ({
   target_amount: fund ? String(fund.target_amount ?? 0) : "",
   current_amount: fund ? String(fund.current_amount ?? 0) : "",
   monthly_contribution:
-    fund?.monthly_contribution === null || fund?.monthly_contribution === undefined
+    fund?.monthly_contribution === null ||
+    fund?.monthly_contribution === undefined
       ? ""
       : String(fund.monthly_contribution),
   target_date: fund?.target_date ?? "",
   notes: fund?.notes ?? "",
 });
 
-export const FundFormModal = ({ opened, onClose, fund }: FundFormModalProps) => {
+export const FundFormModal = ({
+  opened,
+  onClose,
+  fund,
+}: FundFormModalProps) => {
   const [fundForm, setFundForm] = useState(() => buildInitialFundForm(fund));
   const [fundError, setFundError] = useState<string | null>(null);
   const [addFund, { isLoading: isSavingFund }] = useAddFundMutation();
@@ -53,7 +58,10 @@ export const FundFormModal = ({ opened, onClose, fund }: FundFormModalProps) => 
       return;
     }
 
-    if (!fundForm.target_amount || Number.isNaN(Number(fundForm.target_amount))) {
+    if (
+      !fundForm.target_amount ||
+      Number.isNaN(Number(fundForm.target_amount))
+    ) {
       setFundError("Enter a valid target amount.");
       return;
     }
@@ -87,7 +95,7 @@ export const FundFormModal = ({ opened, onClose, fund }: FundFormModalProps) => 
     try {
       const payload = {
         name: fundForm.name.trim(),
-        type: fundForm.type as Fund["type"],
+        type: fundForm.type,
         target_amount: targetAmount,
         current_amount: currentAmount,
         monthly_contribution: monthlyContribution,
@@ -103,7 +111,9 @@ export const FundFormModal = ({ opened, onClose, fund }: FundFormModalProps) => 
 
       onClose();
     } catch {
-      setFundError(fund?.id ? "Unable to update the fund." : "Unable to save the fund.");
+      setFundError(
+        fund?.id ? "Unable to update the fund." : "Unable to save the fund."
+      );
     }
   };
 

@@ -1,11 +1,13 @@
 import { Group, Stack, Switch, Text } from "@mantine/core";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { ChartsSection } from "../components/dashboard/ChartsSection";
 import { OverviewCards } from "../components/dashboard/OverviewCards";
 import { SoftCapAlerts } from "../components/dashboard/SoftCapAlerts";
 import { RecentActivityTable } from "../components/dashboard/RecentActivityTable";
 import { AccountBalances } from "../components/dashboard/AccountBalances";
+import { CoverageCard } from "../components/dashboard/CoverageCard";
+import { NetCashflowCard } from "../components/dashboard/NetCashflowCard";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { useGetAccountsQuery } from "../features/api/apiSlice";
 
@@ -26,7 +28,21 @@ export const Dashboard = () => {
     remaining,
     totalSpent,
     totalBudget,
+    funds,
   } = useDashboardData({ rollupCategories });
+  const cashOnHand = accounts.reduce(
+    (sum, account) => sum + (account.current_balance ?? 0),
+    0
+  );
+  const { incomeTotal, expenseTotal } = useMemo(() => {
+    const income = transactions
+      .filter((tx) => tx.type === "income" && !tx.is_transfer)
+      .reduce((sum, tx) => sum + tx.amount, 0);
+    const expense = transactions
+      .filter((tx) => tx.type === "expense" && !tx.is_transfer)
+      .reduce((sum, tx) => sum + tx.amount, 0);
+    return { incomeTotal: income, expenseTotal: expense };
+  }, [transactions]);
   return (
     <Stack gap="lg">
       <OverviewCards
@@ -49,6 +65,19 @@ export const Dashboard = () => {
         <SoftCapAlerts
           warnings={warnings}
           hasBudgets={hasBudgets}
+          style={{ flex: "1 1 320px" }}
+        />
+      </Group>
+
+      <Group align="stretch" grow wrap="wrap" gap="md">
+        <CoverageCard
+          cashOnHand={cashOnHand}
+          funds={funds}
+          style={{ flex: "1 1 320px" }}
+        />
+        <NetCashflowCard
+          income={incomeTotal}
+          expense={expenseTotal}
           style={{ flex: "1 1 320px" }}
         />
       </Group>

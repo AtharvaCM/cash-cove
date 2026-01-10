@@ -13,7 +13,7 @@ import {
   type ParsedCsv,
   type ParsedImportRow,
 } from "../../lib/transactionImport";
-import type { Category, PaymentMethod } from "../../types/finance";
+import type { Account, Category, PaymentMethod } from "../../types/finance";
 import { CsvInputSection } from "./import/CsvInputSection";
 import { MappingSection } from "./import/MappingSection";
 import { PreviewSection } from "./import/PreviewSection";
@@ -23,6 +23,7 @@ type TransactionImportModalProps = {
   onClose: () => void;
   categories: Category[];
   paymentMethods: PaymentMethod[];
+  accounts: Account[];
 };
 
 export const TransactionImportModal = ({
@@ -30,6 +31,7 @@ export const TransactionImportModal = ({
   onClose,
   categories,
   paymentMethods,
+  accounts,
 }: TransactionImportModalProps) => {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importRaw, setImportRaw] = useState("");
@@ -40,6 +42,7 @@ export const TransactionImportModal = ({
   );
   const [importDefaultCategory, setImportDefaultCategory] = useState("");
   const [importDefaultPayment, setImportDefaultPayment] = useState("");
+  const [importDefaultAccount, setImportDefaultAccount] = useState("");
   const [importRecurring, setImportRecurring] = useState(false);
   const [importMappingOverrides, setImportMappingOverrides] = useState<
     Partial<CsvMapping>
@@ -103,6 +106,14 @@ export const TransactionImportModal = ({
       })),
     [paymentMethods]
   );
+  const accountOptions = useMemo(
+    () =>
+      accounts.map((account) => ({
+        value: account.id,
+        label: `${account.name} · ${account.type}`,
+      })),
+    [accounts]
+  );
 
   const parsedCsv = useMemo<ParsedCsv>(
     () => buildParsedCsv(importRaw, importDelimiter, importHasHeader),
@@ -134,6 +145,7 @@ export const TransactionImportModal = ({
           defaultType: importDefaultType,
           defaultCategoryId: importDefaultCategory,
           defaultPaymentId: importDefaultPayment,
+          defaultAccountId: importDefaultAccount,
           recurring: importRecurring,
         },
         lookups: {
@@ -141,6 +153,10 @@ export const TransactionImportModal = ({
           categoryById: categoryMap,
           paymentByName: paymentNameMap,
           paymentById: paymentMap,
+          accountByName: new Map(
+            accounts.map((acc) => [acc.name.trim().toLowerCase(), acc.id])
+          ),
+          accountById: new Map(accounts.map((acc) => [acc.id, acc.name])),
         },
       }),
     [
@@ -150,11 +166,13 @@ export const TransactionImportModal = ({
       importDefaultType,
       importDefaultCategory,
       importDefaultPayment,
+      importDefaultAccount,
       importRecurring,
       categoryNameMap,
       categoryMap,
       paymentNameMap,
       paymentMap,
+      accounts,
     ]
   );
 
@@ -185,6 +203,7 @@ export const TransactionImportModal = ({
     setImportDefaultType("expense");
     setImportDefaultCategory("");
     setImportDefaultPayment("");
+    setImportDefaultAccount("");
     setImportRecurring(false);
     resetMappingOverrides();
     clearImportFeedback();
@@ -249,6 +268,10 @@ export const TransactionImportModal = ({
 
   const handleImportDefaultPaymentChange = (value: string | null) => {
     setImportDefaultPayment(value ?? "");
+    resetFeedbackForInputChange();
+  };
+  const handleImportDefaultAccountChange = (value: string | null) => {
+    setImportDefaultAccount(value ?? "");
     resetFeedbackForInputChange();
   };
 
@@ -385,12 +408,15 @@ export const TransactionImportModal = ({
           effectiveMapping={effectiveMapping}
           categoryOptions={categoryOptions}
           paymentOptions={paymentOptions}
+          accountOptions={accountOptions}
           importDefaultCategory={importDefaultCategory}
           importDefaultPayment={importDefaultPayment}
+          importDefaultAccount={importDefaultAccount}
           importRecurring={importRecurring}
           onMappingChange={handleMappingChange}
           onDefaultCategoryChange={handleImportDefaultCategoryChange}
           onDefaultPaymentChange={handleImportDefaultPaymentChange}
+          onDefaultAccountChange={handleImportDefaultAccountChange}
           onRecurringChange={handleImportRecurringChange}
         />
 

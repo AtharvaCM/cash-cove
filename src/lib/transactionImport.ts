@@ -11,6 +11,7 @@ export type CsvMapping = {
   type: string;
   category: string;
   payment: string;
+  account: string;
   notes: string;
   tags: string;
 };
@@ -29,6 +30,7 @@ export type ParsedImportRow = {
     amount: number;
     category_id: string | null;
     payment_method_id: string | null;
+    account_id: string | null;
     notes?: string | null;
     tags?: string[];
     is_recurring: boolean;
@@ -39,6 +41,7 @@ export type ParsedImportRow = {
     amount: number;
     category: string;
     payment: string;
+    account: string;
     notes: string;
     tags: string;
   };
@@ -55,6 +58,7 @@ export type ImportDefaults = {
   defaultType: "expense" | "income";
   defaultCategoryId: string;
   defaultPaymentId: string;
+  defaultAccountId: string;
   recurring: boolean;
 };
 
@@ -63,6 +67,8 @@ export type ImportLookups = {
   categoryById: Map<string, string>;
   paymentByName: Map<string, string>;
   paymentById: Map<string, string>;
+  accountByName: Map<string, string>;
+  accountById: Map<string, string>;
 };
 
 export type ParsedImportResult = {
@@ -120,6 +126,7 @@ export const createEmptyMapping = (): CsvMapping => ({
   type: "",
   category: "",
   payment: "",
+  account: "",
   notes: "",
   tags: "",
 });
@@ -146,6 +153,7 @@ export const buildDefaultMapping = (headers: string[]) => {
     ]),
     category: normalizeHeaderIndex(lower, ["category", "merchant category"]),
     payment: normalizeHeaderIndex(lower, ["payment", "method", "account", "card"]),
+    account: normalizeHeaderIndex(lower, ["account name", "account", "card account"]),
     notes: normalizeHeaderIndex(lower, [
       "description",
       "narration",
@@ -529,10 +537,10 @@ export const parseImportRows = ({
         "Default category";
     }
 
-    const rawPayment = getCell(mapping.payment);
-    const normalizedPayment = rawPayment.trim().toLowerCase();
-    let paymentId: string | null = null;
-    let paymentLabel = "Unspecified";
+  const rawPayment = getCell(mapping.payment);
+  const normalizedPayment = rawPayment.trim().toLowerCase();
+  let paymentId: string | null = null;
+  let paymentLabel = "Unspecified";
     if (rawPayment) {
       const matched = lookups.paymentByName.get(normalizedPayment);
       if (matched) {
@@ -550,9 +558,35 @@ export const parseImportRows = ({
       }
     } else if (defaults.defaultPaymentId) {
       paymentId = defaults.defaultPaymentId;
-      paymentLabel =
-        lookups.paymentById.get(defaults.defaultPaymentId) ??
-        "Default payment";
+    paymentLabel =
+      lookups.paymentById.get(defaults.defaultPaymentId) ??
+      "Default payment";
+  }
+
+    const rawAccount = getCell(mapping.account);
+    const normalizedAccount = rawAccount.trim().toLowerCase();
+    let accountId: string | null = null;
+    let accountLabel = "Unspecified";
+    if (rawAccount) {
+      const matched = lookups.accountByName.get(normalizedAccount);
+      if (matched) {
+        accountId = matched;
+        accountLabel = lookups.accountById.get(matched) ?? rawAccount;
+      } else if (defaults.defaultAccountId) {
+        accountId = defaults.defaultAccountId;
+        accountLabel =
+          lookups.accountById.get(defaults.defaultAccountId) ??
+          "Default account";
+        rowWarnings.push("Account not found; using default.");
+      } else {
+        rowWarnings.push("Account not found; left empty.");
+        accountLabel = rawAccount;
+      }
+    } else if (defaults.defaultAccountId) {
+      accountId = defaults.defaultAccountId;
+      accountLabel =
+        lookups.accountById.get(defaults.defaultAccountId) ??
+        "Default account";
     }
 
     const notes = getCell(mapping.notes);
@@ -579,6 +613,7 @@ export const parseImportRows = ({
         amount: amountValue,
         category_id: categoryId,
         payment_method_id: paymentId,
+        account_id: accountId,
         notes: notes.trim() ? notes.trim() : null,
         tags,
         is_recurring: defaults.recurring,
@@ -589,6 +624,7 @@ export const parseImportRows = ({
         amount: amountValue,
         category: categoryLabel,
         payment: paymentLabel,
+        account: accountLabel,
         notes: notes.trim() || "-",
         tags: tags.length > 0 ? tags.join(", ") : "-",
       },

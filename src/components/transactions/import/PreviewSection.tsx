@@ -49,6 +49,7 @@ type PreviewRow = {
   type: string;
   amount: number;
   category: string;
+  account: string;
   payment: string;
   notes: string;
   tags: string;
@@ -76,6 +77,7 @@ export const PreviewSection = ({
         type: row.preview.type,
         amount: row.preview.amount,
         category: row.preview.category,
+        account: row.preview.account,
         payment: row.preview.payment,
         notes: row.preview.notes,
         tags: row.preview.tags,
@@ -95,6 +97,7 @@ export const PreviewSection = ({
         valueFormatter: (params) => formatINR(Number(params.value ?? 0)),
       },
       { headerName: "Category", field: "category", flex: 1.1 },
+      { headerName: "Account", field: "account", flex: 1 },
       { headerName: "Payment", field: "payment", flex: 1 },
       {
         headerName: "Notes",

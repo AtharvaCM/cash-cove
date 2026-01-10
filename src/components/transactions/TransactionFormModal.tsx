@@ -127,8 +127,27 @@ export const TransactionFormModal = ({
     event.preventDefault();
     setError(null);
 
+    const selectedAccount = accounts.find((acc) => acc.id === effectiveAccountId);
+    const selectedPayment = paymentMethods.find(
+      (pm) => pm.id === effectivePaymentMethodId
+    );
+
     if (!form.amount || Number.isNaN(Number(form.amount))) {
       setError("Enter a valid amount.");
+      return;
+    }
+
+    if (!effectiveAccountId) {
+      setError("Select an account to keep balances in sync.");
+      return;
+    }
+
+    if (
+      selectedAccount?.type === "card" &&
+      effectivePaymentMethodId &&
+      !selectedPayment?.name.toLowerCase().includes("card")
+    ) {
+      setError("Card accounts should use a card/pos payment method.");
       return;
     }
 

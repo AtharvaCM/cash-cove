@@ -17,6 +17,7 @@ import {
   buildCategoryLookup,
   rollupCategoryTotals,
 } from "../lib/categories";
+import { useGetFundsQuery } from "../features/api/fundsApi";
 
 type Options = {
   selectedMonth?: string;
@@ -33,6 +34,7 @@ export const useDashboardData = (options: Options = {}) => {
   const { data: transactions = [], isLoading } = useGetTransactionsQuery({
     month,
   });
+  const { data: funds = [] } = useGetFundsQuery();
 
   const categoryLookup = useMemo(
     () => buildCategoryLookup(categories),
@@ -81,7 +83,6 @@ export const useDashboardData = (options: Options = {}) => {
 
   const remaining = metrics.totalBudget - metrics.totalSpent;
   const hasBudgets = budgets.length > 0;
-
   return {
     month,
     monthLabel,
@@ -95,6 +96,7 @@ export const useDashboardData = (options: Options = {}) => {
     dailyData,
     warnings,
     remaining,
+    funds,
     ...metrics,
   };
 };

@@ -63,6 +63,11 @@ const applyAccountDelta = async (accountId: string | null, delta: number) => {
   return updateError ?? null;
 };
 
+export const transactionsTestHelpers = {
+  signedAmount,
+  applyAccountDelta,
+};
+
 export const transactionsApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getTransactions: builder.query<Transaction[], MonthArgs>({

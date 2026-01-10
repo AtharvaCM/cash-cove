@@ -146,6 +146,7 @@ export const Transactions = () => {
         onClose={() => setIsImportOpen(false)}
         categories={categories}
         paymentMethods={paymentMethods}
+        accounts={accounts}
       />
 
       <Paper withBorder shadow="sm" radius="lg" p="md">

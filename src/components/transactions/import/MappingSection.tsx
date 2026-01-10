@@ -17,12 +17,15 @@ type MappingSectionProps = {
   effectiveMapping: CsvMapping;
   categoryOptions: SelectOption[];
   paymentOptions: SelectOption[];
+  accountOptions: SelectOption[];
   importDefaultCategory: string;
   importDefaultPayment: string;
+  importDefaultAccount: string;
   importRecurring: boolean;
   onMappingChange: (field: keyof CsvMapping, value: string | null) => void;
   onDefaultCategoryChange: (value: string | null) => void;
   onDefaultPaymentChange: (value: string | null) => void;
+  onDefaultAccountChange: (value: string | null) => void;
   onRecurringChange: (checked: boolean) => void;
 };
 
@@ -31,12 +34,15 @@ export const MappingSection = ({
   effectiveMapping,
   categoryOptions,
   paymentOptions,
+  accountOptions,
   importDefaultCategory,
   importDefaultPayment,
+  importDefaultAccount,
   importRecurring,
   onMappingChange,
   onDefaultCategoryChange,
   onDefaultPaymentChange,
+  onDefaultAccountChange,
   onRecurringChange,
 }: MappingSectionProps) => {
   const columnOptions = useMemo(
@@ -125,6 +131,13 @@ export const MappingSection = ({
             onChange={(value) => onMappingChange("tags", value)}
             clearable
           />
+          <Select
+            label="Account"
+            data={columnOptions}
+            value={effectiveMapping.account || null}
+            onChange={(value) => onMappingChange("account", value)}
+            clearable
+          />
         </SimpleGrid>
       )}
       <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
@@ -141,6 +154,14 @@ export const MappingSection = ({
           data={paymentOptions}
           value={importDefaultPayment || null}
           onChange={onDefaultPaymentChange}
+          placeholder="Unspecified"
+          clearable
+        />
+        <Select
+          label="Default account"
+          data={accountOptions}
+          value={importDefaultAccount || null}
+          onChange={onDefaultAccountChange}
           placeholder="Unspecified"
           clearable
         />

@@ -69,6 +69,7 @@ describe("transaction import utilities", () => {
       type: "8",
       category: "5",
       payment: "6",
+      account: "",
       notes: "1",
       tags: "7",
     };
@@ -79,6 +80,7 @@ describe("transaction import utilities", () => {
       defaultType: "expense" as const,
       defaultCategoryId: "",
       defaultPaymentId: "",
+      defaultAccountId: "",
       recurring: false,
     };
 
@@ -99,6 +101,8 @@ describe("transaction import utilities", () => {
         ["p1", "UPI"],
         ["p2", "Bank"],
       ]),
+      accountByName: new Map(),
+      accountById: new Map(),
     };
 
     const result = parseImportRows({

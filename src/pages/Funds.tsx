@@ -11,6 +11,7 @@ import {
 import { Plus, Coins } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
+  useGetAccountsQuery,
   useGetFundContributionsQuery,
   useGetFundsQuery,
 } from "../features/api/apiSlice";
@@ -30,6 +31,7 @@ export const Funds = () => {
   const { data: funds = [], isLoading: isFundsLoading } = useGetFundsQuery();
   const { data: contributions = [], isLoading: isContribLoading } =
     useGetFundContributionsQuery();
+  const { data: accounts = [] } = useGetAccountsQuery();
 
   const [isFundModalOpen, setIsFundModalOpen] = useState(false);
   const [selectedFund, setSelectedFund] = useState<Fund | null>(null);
@@ -53,6 +55,10 @@ export const Funds = () => {
 
   const projections = useMemo(() => buildFundProjections(funds), [funds]);
   const alerts = useMemo(() => buildFundAlerts(projections), [projections]);
+  const cashOnHand = useMemo(
+    () => accounts.reduce((sum, account) => sum + (account.current_balance ?? 0), 0),
+    [accounts]
+  );
 
   const contributionMap = useMemo(
     () => new Map(contributions.map((item) => [item.id, item])),
@@ -129,7 +135,7 @@ export const Funds = () => {
         contribution={selectedContribution}
       />
 
-      <FundSummaryCards totals={totals} fundCount={funds.length} />
+      <FundSummaryCards totals={totals} fundCount={funds.length} cashOnHand={cashOnHand} />
 
       <Paper withBorder shadow="sm" radius="lg" p="md">
         <Group justify="space-between" align="center" wrap="wrap">

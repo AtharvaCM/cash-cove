@@ -9,6 +9,7 @@ export const apiSlice = createApi({
     "Budgets",
     "Categories",
     "PaymentMethods",
+    "Accounts",
     "Tags",
     "Funds",
     "FundContributions",

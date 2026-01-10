@@ -11,6 +11,7 @@ type TransactionRow = {
   amount: number;
   category_id: string | null;
   payment_method_id: string | null;
+  account_id: string | null;
   notes_enc: string | null;
   is_transfer: boolean | null;
   is_recurring: boolean;
@@ -33,6 +34,35 @@ const normalizeTags = (tags: string[]) =>
     .filter(Boolean)
     .map((tag) => tag.toLowerCase());
 
+const signedAmount = (row: {
+  amount: number;
+  type: "expense" | "income";
+  is_transfer: boolean | null;
+  account_id: string | null;
+}) => {
+  if (!row.account_id || row.is_transfer) return 0;
+  const sign = row.type === "income" ? 1 : -1;
+  return sign * Number(row.amount ?? 0);
+};
+
+const applyAccountDelta = async (accountId: string | null, delta: number) => {
+  if (!accountId || delta === 0) return null;
+  const { data: account, error: fetchError } = await supabase
+    .from("accounts")
+    .select("current_balance")
+    .eq("id", accountId)
+    .single();
+  if (fetchError || !account) {
+    return fetchError ?? { message: "Account not found" };
+  }
+  const next = Number(account.current_balance ?? 0) + delta;
+  const { error: updateError } = await supabase
+    .from("accounts")
+    .update({ current_balance: next })
+    .eq("id", accountId);
+  return updateError ?? null;
+};
+
 export const transactionsApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getTransactions: builder.query<Transaction[], MonthArgs>({
@@ -43,7 +73,7 @@ export const transactionsApi = apiSlice.injectEndpoints({
         const { data, error } = await supabase
           .from("transactions")
           .select(
-            "id, type, date, amount, category_id, payment_method_id, notes_enc, is_recurring, is_transfer, transaction_tags(tags(id, name))"
+            "id, type, date, amount, category_id, payment_method_id, account_id, notes_enc, is_recurring, is_transfer, transaction_tags(tags(id, name))"
           )
           .gte("date", start.format("YYYY-MM-DD"))
           .lte("date", end.format("YYYY-MM-DD"))
@@ -73,6 +103,7 @@ export const transactionsApi = apiSlice.injectEndpoints({
               amount: Number(row.amount),
               category_id: row.category_id,
               payment_method_id: row.payment_method_id,
+              account_id: row.account_id,
               notes: row.notes_enc ?? null,
               notes_enc: row.notes_enc,
               is_transfer: Boolean(row.is_transfer),
@@ -101,14 +132,26 @@ export const transactionsApi = apiSlice.injectEndpoints({
 
         const { data: inserted, error } = await supabase
           .from("transactions")
-          .insert({ ...input, notes_enc, is_transfer: input.is_transfer ?? false })
+          .insert({
+            ...input,
+            notes_enc,
+            is_transfer: input.is_transfer ?? false,
+          })
           .select(
-            "id, type, date, amount, category_id, payment_method_id, notes_enc, is_recurring, is_transfer"
+            "id, type, date, amount, category_id, payment_method_id, account_id, notes_enc, is_recurring, is_transfer"
           )
           .single();
 
         if (error) {
           return { error: { message: error.message } };
+        }
+
+        const accountUpdateError = await applyAccountDelta(
+          inserted.account_id,
+          signedAmount(inserted)
+        );
+        if (accountUpdateError) {
+          return { error: { message: accountUpdateError.message } };
         }
 
         let linkedTags: Tag[] = [];
@@ -152,6 +195,7 @@ export const transactionsApi = apiSlice.injectEndpoints({
             amount: Number(inserted.amount),
             category_id: inserted.category_id,
             payment_method_id: inserted.payment_method_id,
+            account_id: inserted.account_id,
             notes: notes ?? null,
             notes_enc: inserted.notes_enc,
             is_transfer: inserted.is_transfer ?? false,
@@ -166,17 +210,58 @@ export const transactionsApi = apiSlice.injectEndpoints({
       async queryFn({ id, tags, notes, ...input }) {
         const notes_enc = notes || null;
 
+        const { data: existing } = await supabase
+          .from("transactions")
+          .select("account_id, amount, type, is_transfer")
+          .eq("id", id)
+          .single();
+
         const { data: updated, error } = await supabase
           .from("transactions")
-          .update({ ...input, notes_enc, is_transfer: input.is_transfer ?? false })
+          .update({
+            ...input,
+            notes_enc,
+            is_transfer: input.is_transfer ?? false,
+          })
           .eq("id", id)
           .select(
-            "id, type, date, amount, category_id, payment_method_id, notes_enc, is_recurring, is_transfer"
+            "id, type, date, amount, category_id, payment_method_id, account_id, notes_enc, is_recurring, is_transfer"
           )
           .single();
 
         if (error) {
           return { error: { message: error.message } };
+        }
+
+        if (existing) {
+          const oldSigned = signedAmount(existing as TransactionRow);
+          const newSigned = signedAmount(updated);
+          if ((existing as TransactionRow).account_id === updated.account_id) {
+            const accountUpdateError = await applyAccountDelta(
+              updated.account_id,
+              newSigned - oldSigned
+            );
+            if (accountUpdateError) {
+              return { error: { message: accountUpdateError.message } };
+            }
+          } else {
+            if ((existing as TransactionRow).account_id) {
+              const accountUpdateError = await applyAccountDelta(
+                (existing as TransactionRow).account_id,
+                -oldSigned
+              );
+              if (accountUpdateError) {
+                return { error: { message: accountUpdateError.message } };
+              }
+            }
+            const accountUpdateError = await applyAccountDelta(
+              updated.account_id,
+              newSigned
+            );
+            if (accountUpdateError) {
+              return { error: { message: accountUpdateError.message } };
+            }
+          }
         }
 
         const { error: deleteError } = await supabase
@@ -230,6 +315,7 @@ export const transactionsApi = apiSlice.injectEndpoints({
             amount: Number(updated.amount),
             category_id: updated.category_id,
             payment_method_id: updated.payment_method_id,
+            account_id: updated.account_id,
             notes: notes ?? null,
             notes_enc: updated.notes_enc,
             is_transfer: updated.is_transfer ?? false,
@@ -242,6 +328,15 @@ export const transactionsApi = apiSlice.injectEndpoints({
     }),
     deleteTransaction: builder.mutation<void, DeleteByIdInput>({
       async queryFn({ id }) {
+        const { data: existing, error: fetchError } = await supabase
+          .from("transactions")
+          .select("account_id, amount, type, is_transfer")
+          .eq("id", id)
+          .single();
+        if (fetchError) {
+          return { error: { message: fetchError.message } };
+        }
+
         const { error } = await supabase
           .from("transactions")
           .delete()
@@ -249,6 +344,17 @@ export const transactionsApi = apiSlice.injectEndpoints({
 
         if (error) {
           return { error: { message: error.message } };
+        }
+
+        if (existing) {
+          const delta = -signedAmount(existing as TransactionRow);
+          const accountUpdateError = await applyAccountDelta(
+            (existing as TransactionRow).account_id,
+            delta
+          );
+          if (accountUpdateError) {
+            return { error: { message: accountUpdateError.message } };
+          }
         }
 
         return { data: undefined };

@@ -21,6 +21,12 @@ export {
   useUpsertBudgetsMutation,
 } from "./budgetsApi";
 export {
+  useGetAccountsQuery,
+  useAddAccountMutation,
+  useUpdateAccountMutation,
+  useDeleteAccountMutation,
+} from "./accountsApi";
+export {
   useGetTransactionsQuery,
   useAddTransactionMutation,
   useUpdateTransactionMutation,

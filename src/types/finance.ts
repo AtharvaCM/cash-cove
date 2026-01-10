@@ -12,6 +12,14 @@ export type PaymentMethod = {
   name: string;
 };
 
+export type Account = {
+  id: string;
+  name: string;
+  type: "bank" | "card" | "wallet" | "cash" | "other";
+  current_balance: number;
+  currency: string;
+};
+
 export type Tag = {
   id: string;
   name: string;
@@ -24,6 +32,7 @@ export type Transaction = {
   amount: number;
   category_id: string | null;
   payment_method_id: string | null;
+  account_id?: string | null;
   notes?: string | null;
   notes_enc?: string | null;
   is_transfer?: boolean;

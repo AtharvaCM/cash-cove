@@ -80,7 +80,7 @@ export const PaymentManager = () => {
     <>
       <SectionCard
         title="Payment methods"
-        description="Cards, accounts, or wallets to tag your transactions."
+        description="Channels like UPI, POS, cash handoff; accounts hold balances."
         badge={`${payments.length} total`}
       >
         <Group justify="space-between" mb="sm">

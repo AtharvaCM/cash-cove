@@ -12,7 +12,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import dayjs from "dayjs";
 import {
@@ -21,7 +21,12 @@ import {
   useUpdateTransactionMutation,
 } from "../../features/api/apiSlice";
 import { formatINR } from "../../lib/format";
-import type { Category, PaymentMethod, Transaction } from "../../types/finance";
+import type {
+  Account,
+  Category,
+  PaymentMethod,
+  Transaction,
+} from "../../types/finance";
 
 type TransactionFormModalProps = {
   opened: boolean;
@@ -29,6 +34,7 @@ type TransactionFormModalProps = {
   transaction?: Transaction | null;
   categories: Category[];
   paymentMethods: PaymentMethod[];
+  accounts: Account[];
 };
 
 const buildInitialForm = (transaction?: Transaction | null) => ({
@@ -37,6 +43,7 @@ const buildInitialForm = (transaction?: Transaction | null) => ({
   amount: transaction ? String(transaction.amount) : "",
   category_id: transaction?.category_id ?? "",
   payment_method_id: transaction?.payment_method_id ?? "",
+  account_id: transaction?.account_id ?? "",
   notes: transaction?.notes ?? "",
   tags: transaction?.tags?.length
     ? transaction.tags.map((tag) => tag.name).join(", ")
@@ -51,6 +58,7 @@ export const TransactionFormModal = ({
   transaction,
   categories,
   paymentMethods,
+  accounts,
 }: TransactionFormModalProps) => {
   const mode = transaction ? "edit" : "create";
   const [form, setForm] = useState(() => buildInitialForm(transaction));
@@ -84,6 +92,20 @@ export const TransactionFormModal = ({
       })),
     [paymentMethods]
   );
+  const accountOptions = useMemo(
+    () =>
+      accounts.map((account) => ({
+        value: account.id,
+        label: `${account.name} · ${account.type === "card" ? "Credit card" : account.type}`,
+      })),
+    [accounts]
+  );
+
+  useEffect(() => {
+    if (!form.account_id && accounts.length > 0) {
+      setForm((prev) => ({ ...prev, account_id: accounts[0].id }));
+    }
+  }, [accounts, form.account_id]);
 
   const handleChange = (
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -108,6 +130,7 @@ export const TransactionFormModal = ({
         amount: Number(form.amount),
         category_id: form.category_id || null,
         payment_method_id: form.payment_method_id || null,
+        account_id: form.account_id || null,
         notes: form.notes.trim() ? form.notes.trim() : null,
         tags: form.tags
           .split(",")
@@ -225,23 +248,35 @@ export const TransactionFormModal = ({
           </SimpleGrid>
           <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
             <Select
-              label="Payment"
+              label="Account (bank/card/wallet)"
+              data={accountOptions}
+              value={form.account_id || null}
+              onChange={(value) =>
+                setForm((prev) => ({ ...prev, account_id: value ?? "" }))
+              }
+              placeholder="Select"
+              required
+              searchable
+              clearable
+            />
+            <Select
+              label="Payment method (channel)"
               data={paymentOptions}
               value={form.payment_method_id || null}
               onChange={(value) =>
                 setForm((prev) => ({ ...prev, payment_method_id: value ?? "" }))
               }
-              placeholder="Select"
+              placeholder="e.g., UPI, POS, Cash"
               clearable
             />
-            <TextInput
-              label="Tags"
-              name="tags"
-              value={form.tags}
-              onChange={handleChange}
-              placeholder="food, weekend, work"
-            />
           </SimpleGrid>
+          <TextInput
+            label="Tags"
+            name="tags"
+            value={form.tags}
+            onChange={handleChange}
+            placeholder="food, weekend, work"
+          />
           <Checkbox
             label="Exclude from budgets/income (transfer, reimbursement, internal move)"
             checked={form.is_transfer}

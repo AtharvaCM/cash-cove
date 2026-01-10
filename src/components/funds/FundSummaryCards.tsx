@@ -9,10 +9,20 @@ type FundSummaryCardsProps = {
     progress: number;
   };
   fundCount: number;
+  cashOnHand: number;
 };
 
-export const FundSummaryCards = ({ totals, fundCount }: FundSummaryCardsProps) => (
-  <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
+export const FundSummaryCards = ({
+  totals,
+  fundCount,
+  cashOnHand,
+}: FundSummaryCardsProps) => {
+  const coverage = cashOnHand - totals.saved;
+  const coverageLabel =
+    coverage >= 0 ? `Unallocated cash ${formatINR(coverage)}` : "Over-allocated";
+
+  return (
+    <SimpleGrid cols={{ base: 1, md: 4 }} spacing="md">
     <Paper withBorder shadow="sm" radius="lg" p="md">
       <Text size="sm" c="dimmed">
         Total saved
@@ -46,5 +56,17 @@ export const FundSummaryCards = ({ totals, fundCount }: FundSummaryCardsProps) =
         Towards all goals
       </Text>
     </Paper>
+      <Paper withBorder shadow="sm" radius="lg" p="md">
+        <Text size="sm" c="dimmed">
+          Cash coverage
+        </Text>
+        <Title order={3} mt="xs">
+          {formatINR(cashOnHand)}
+        </Title>
+        <Text size="sm" c={coverage >= 0 ? "green" : "red"} fw={600}>
+          {coverageLabel}
+        </Text>
+      </Paper>
   </SimpleGrid>
-);
+  );
+};

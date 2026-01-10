@@ -4,6 +4,7 @@ import { Upload, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import dayjs from "dayjs";
 import {
+  useGetAccountsQuery,
   useGetCategoriesQuery,
   useGetPaymentMethodsQuery,
   useGetTransactionsQuery,
@@ -25,6 +26,7 @@ export const Transactions = () => {
 
   const { data: categories = [] } = useGetCategoriesQuery();
   const { data: paymentMethods = [] } = useGetPaymentMethodsQuery();
+  const { data: accounts = [] } = useGetAccountsQuery();
   const { data: transactions = [], isLoading: isTransactionsLoading } =
     useGetTransactionsQuery({ month });
 
@@ -36,6 +38,10 @@ export const Transactions = () => {
     () => new Map(paymentMethods.map((pm) => [pm.id, pm.name])),
     [paymentMethods]
   );
+  const accountMap = useMemo(
+    () => new Map(accounts.map((account) => [account.id, account.name])),
+    [accounts]
+  );
 
   const rows = useMemo(
     () =>
@@ -43,6 +49,7 @@ export const Transactions = () => {
         id: tx.id,
         date: dayjs(tx.date).format("DD MMM"),
         category: categoryMap.get(tx.category_id ?? "") ?? "-",
+        account: accountMap.get(tx.account_id ?? "") ?? "-",
         payment: paymentMap.get(tx.payment_method_id ?? "") ?? "-",
         notes: tx.notes?.trim() || "-",
         tags: tx.tags?.length ? tx.tags.map((tag) => tag.name).join(", ") : "-",
@@ -50,13 +57,14 @@ export const Transactions = () => {
         type: tx.type,
         flag: tx.is_transfer ? "Transfer" : "",
       })),
-    [transactions, categoryMap, paymentMap]
+    [transactions, categoryMap, paymentMap, accountMap]
   );
 
   const columns = useMemo<ColDef<(typeof rows)[number]>[]>(
     () => [
       { headerName: "Date", field: "date", maxWidth: 120 },
       { headerName: "Category", field: "category", flex: 1.2 },
+      { headerName: "Account", field: "account", flex: 1 },
       { headerName: "Payment", field: "payment", flex: 1 },
       {
         headerName: "Flag",
@@ -130,6 +138,7 @@ export const Transactions = () => {
         transaction={selectedTransaction}
         categories={categories}
         paymentMethods={paymentMethods}
+        accounts={accounts}
       />
       <TransactionImportModal
         key={importKey}

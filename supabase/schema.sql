@@ -18,6 +18,17 @@ create table if not exists payment_methods (
   unique (user_id, name)
 );
 
+create table if not exists accounts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid(),
+  name text not null,
+  type text not null check (type in ('bank', 'card', 'wallet', 'cash', 'other')),
+  current_balance numeric(14, 2) not null default 0,
+  currency text not null default 'INR',
+  created_at timestamptz default now(),
+  unique (user_id, name)
+);
+
 create table if not exists tags (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid(),
@@ -34,6 +45,7 @@ create table if not exists transactions (
   amount numeric(12, 2) not null check (amount >= 0),
   category_id uuid references categories(id) on delete set null,
   payment_method_id uuid references payment_methods(id) on delete set null,
+  account_id uuid references accounts(id) on delete set null,
   notes_enc text,
   is_transfer boolean default false,
   is_recurring boolean default false,
@@ -93,6 +105,7 @@ alter table fund_contributions
 
 alter table categories enable row level security;
 alter table payment_methods enable row level security;
+alter table accounts enable row level security;
 alter table tags enable row level security;
 alter table transactions enable row level security;
 alter table transaction_tags enable row level security;
@@ -104,6 +117,9 @@ create policy "Categories are user-owned" on categories
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create policy "Payment methods are user-owned" on payment_methods
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "Accounts are user-owned" on accounts
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create policy "Tags are user-owned" on tags

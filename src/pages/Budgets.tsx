@@ -7,19 +7,22 @@ import {
   useGetBudgetsQuery,
   useGetCategoriesQuery,
   useUpsertBudgetsMutation,
+  useGetTransactionsQuery,
 } from "../features/api/apiSlice";
 import { formatINR, formatMonthLabel } from "../lib/format";
 import { DatatrixTable } from "../components/DatatrixTable";
 import { BudgetDeleteModal } from "../components/budgets/BudgetDeleteModal";
 import { BudgetFormModal } from "../components/budgets/BudgetFormModal";
 import { BudgetBulkModal } from "../components/budgets/BudgetBulkModal";
-import type { ColDef } from "ag-grid-community";
+import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import type { Budget } from "../types/finance";
 
 type BudgetRow = {
   id: string;
   category: string;
   amount: number;
+  spend: number;
+  status: "over" | "near" | "ok" | "none";
 };
 
 export const Budgets = () => {
@@ -33,6 +36,7 @@ export const Budgets = () => {
   const { data: categories = [] } = useGetCategoriesQuery();
   const { data: budgets = [], isLoading: isBudgetsLoading } =
     useGetBudgetsQuery(month);
+  const { data: transactions = [] } = useGetTransactionsQuery({ month });
   const prevMonth = dayjs(month + "-01").subtract(1, "month").format("YYYY-MM");
   const { data: prevBudgets = [] } = useGetBudgetsQuery(prevMonth);
   const [upsertBudgets] = useUpsertBudgetsMutation();
@@ -63,14 +67,44 @@ export const Budgets = () => {
     () => budgets.reduce((sum, budget) => sum + budget.amount, 0),
     [budgets]
   );
+  const spendMap = useMemo(() => {
+    const map = new Map<string, number>();
+    let overall = 0;
+    transactions
+      .filter((tx) => tx.type === "expense" && !tx.is_transfer)
+      .forEach((tx) => {
+        const key = tx.category_id ?? "overall";
+        map.set(key, (map.get(key) ?? 0) + tx.amount);
+        overall += tx.amount;
+      });
+    map.set("overall", overall);
+    return map;
+  }, [transactions]);
   const rows = useMemo<BudgetRow[]>(
     () =>
       budgets.map((budget) => ({
         id: budget.id,
         category: categoryMap.get(budget.category_id ?? "") ?? "Overall",
         amount: budget.amount,
+        spend:
+          budget.category_id === null
+            ? spendMap.get("overall") ?? 0
+            : spendMap.get(budget.category_id) ?? 0,
+        status: (() => {
+          const spend =
+            budget.category_id === null
+              ? spendMap.get("overall") ?? 0
+              : spendMap.get(budget.category_id) ?? 0;
+          if (budget.amount === 0) {
+            return spend > 0 ? "over" : "ok";
+          }
+          const ratio = spend / budget.amount;
+          if (ratio > 1) return "over";
+          if (ratio >= 0.85) return "near";
+          return "ok";
+        })(),
       })),
-    [budgets, categoryMap]
+    [budgets, categoryMap, spendMap]
   );
 
   const columns = useMemo<ColDef<BudgetRow>[]>(
@@ -81,6 +115,50 @@ export const Budgets = () => {
         field: "amount",
         maxWidth: 180,
         valueFormatter: (params) => formatINR(Number(params.value ?? 0)),
+      },
+      {
+        headerName: "Spent",
+        field: "spend",
+        maxWidth: 200,
+        cellRenderer: (params: ICellRendererParams<BudgetRow>) => {
+          const spend = Number(params.value ?? 0);
+          const amount = params.data?.amount ?? 0;
+          const status = params.data?.status ?? "ok";
+          let color = "#2f9e44";
+          let label = "Within budget";
+          if (amount === 0 && spend > 0) {
+            color = "#e03131";
+            label = "No budget";
+          } else if (status === "over") {
+            color = "#e03131";
+            label = "Over budget";
+          } else if (status === "near") {
+            color = "#f08c00";
+            label = "Near limit";
+          }
+          return (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+              title={label}
+            >
+              <span
+                style={{
+                  display: "inline-flex",
+                  width: 10,
+                  height: 10,
+                  borderRadius: "999px",
+                  background: color,
+                  flexShrink: 0,
+                }}
+              />
+              <span>{formatINR(spend)}</span>
+            </div>
+          );
+        },
       },
     ],
     []

@@ -1,9 +1,13 @@
 import { Badge, Button, Group, Paper, Stack, Text, Title } from "@mantine/core";
 import { MonthPickerInput } from "@mantine/dates";
-import { Layers, Plus } from "lucide-react";
+import { Copy, Layers, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import dayjs from "dayjs";
-import { useGetBudgetsQuery, useGetCategoriesQuery } from "../features/api/apiSlice";
+import {
+  useGetBudgetsQuery,
+  useGetCategoriesQuery,
+  useUpsertBudgetsMutation,
+} from "../features/api/apiSlice";
 import { formatINR, formatMonthLabel } from "../lib/format";
 import { DatatrixTable } from "../components/DatatrixTable";
 import { BudgetDeleteModal } from "../components/budgets/BudgetDeleteModal";
@@ -24,10 +28,14 @@ export const Budgets = () => {
   const [isBulkOpen, setIsBulkOpen] = useState(false);
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Budget | null>(null);
+  const [copying, setCopying] = useState(false);
 
   const { data: categories = [] } = useGetCategoriesQuery();
   const { data: budgets = [], isLoading: isBudgetsLoading } =
     useGetBudgetsQuery(month);
+  const prevMonth = dayjs(month + "-01").subtract(1, "month").format("YYYY-MM");
+  const { data: prevBudgets = [] } = useGetBudgetsQuery(prevMonth);
+  const [upsertBudgets] = useUpsertBudgetsMutation();
 
   const categoryMap = useMemo(
     () => new Map(categories.map((category) => [category.id, category.name])),
@@ -110,6 +118,29 @@ export const Budgets = () => {
     ? categoryMap.get(deleteTarget.category_id) ?? "this category"
     : "Overall";
 
+  const handleCopyPrevMonth = async () => {
+    if (copying) return;
+    setCopying(true);
+    try {
+      const existingKeys = new Set(
+        budgets.map((b) => `${b.category_id ?? "overall"}`)
+      );
+      const items = prevBudgets
+        .filter((b) => !existingKeys.has(`${b.category_id ?? "overall"}`))
+        .map((b) => ({
+          category_id: b.category_id,
+          amount: b.amount,
+        }));
+      if (items.length === 0) {
+        setCopying(false);
+        return;
+      }
+      await upsertBudgets({ month, items }).unwrap();
+    } finally {
+      setCopying(false);
+    }
+  };
+
   const formKey = `${selectedBudget?.id ?? "new"}-${
     isFormOpen ? "open" : "closed"
   }`;
@@ -169,6 +200,14 @@ export const Budgets = () => {
             <Badge variant="light" color="blue">
               Budget alerts (80%)
             </Badge>
+            <Button
+              variant="light"
+              onClick={handleCopyPrevMonth}
+              disabled={copying || prevBudgets.length === 0}
+              leftSection={<Copy size={16} strokeWidth={2} />}
+            >
+              Copy last month
+            </Button>
             <Button
               variant="light"
               onClick={() => setIsBulkOpen(true)}

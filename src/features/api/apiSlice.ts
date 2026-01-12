@@ -43,3 +43,9 @@ export {
   useUpdateFundContributionMutation,
   useDeleteFundContributionMutation,
 } from "./fundsApi";
+export {
+  useGetSubscriptionsQuery,
+  useAddSubscriptionMutation,
+  useUpdateSubscriptionMutation,
+  useDeleteSubscriptionMutation,
+} from "./subscriptionsApi";

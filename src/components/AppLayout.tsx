@@ -20,6 +20,7 @@ import {
   List,
   Wallet,
   PiggyBank,
+  Repeat,
   Settings as SettingsIcon,
   RefreshCcw,
   LogOutIcon,
@@ -75,6 +76,7 @@ export const AppLayout = () => {
     "/transactions": "Transactions",
     "/budgets": "Budgets",
     "/funds": "Funds",
+    "/subscriptions": "Subscriptions",
     "/settings": "Settings",
   };
 
@@ -104,6 +106,7 @@ export const AppLayout = () => {
     { to: "/", label: "Overview", icon: <LayoutGrid size={18} /> },
     { to: "/cashflow", label: "Cashflow", icon: <TrendingUp size={18} /> },
     { to: "/transactions", label: "Transactions", icon: <List size={18} /> },
+    { to: "/subscriptions", label: "Subscriptions", icon: <Repeat size={18} /> },
     { to: "/budgets", label: "Budgets", icon: <Wallet size={18} /> },
     { to: "/funds", label: "Funds", icon: <PiggyBank size={18} /> },
     { to: "/settings", label: "Settings", icon: <SettingsIcon size={18} /> },

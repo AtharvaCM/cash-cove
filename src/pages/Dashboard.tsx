@@ -10,14 +10,16 @@ import { AccountBalances } from "../components/dashboard/AccountBalances";
 import { CoverageCard } from "../components/dashboard/CoverageCard";
 import { NetCashflowCard } from "../components/dashboard/NetCashflowCard";
 import { ForecastCard } from "../components/dashboard/ForecastCard";
+import { UpcomingSubscriptionsCard } from "../components/dashboard/UpcomingSubscriptionsCard";
 import { useDashboardData } from "../hooks/useDashboardData";
-import { useGetAccountsQuery } from "../features/api/apiSlice";
+import { useGetAccountsQuery, useGetSubscriptionsQuery } from "../features/api/apiSlice";
 
 export const Dashboard = () => {
   const [rollupCategories, setRollupCategories] = useState(true);
   const [hideBalances, setHideBalances] = useState(true);
   const { data: accounts = [], isLoading: isAccountsLoading } =
     useGetAccountsQuery();
+  const { data: subscriptions = [] } = useGetSubscriptionsQuery();
   const {
     monthLabel,
     transactions,
@@ -100,6 +102,10 @@ export const Dashboard = () => {
           avgDailySpend={avgDailySpend}
           recurringIncome={recurringIncome}
           recurringExpense={recurringExpense}
+          style={{ flex: "1 1 320px" }}
+        />
+        <UpcomingSubscriptionsCard
+          subscriptions={subscriptions}
           style={{ flex: "1 1 320px" }}
         />
       </Group>

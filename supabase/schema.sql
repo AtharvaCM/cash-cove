@@ -60,6 +60,25 @@ create table if not exists transaction_tags (
   primary key (transaction_id, tag_id)
 );
 
+create table if not exists subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid(),
+  name text not null,
+  amount numeric(12, 2) not null check (amount >= 0),
+  currency text not null default 'INR',
+  interval_months integer not null default 1 check (interval_months >= 1),
+  billing_anchor date not null,
+  next_due date not null,
+  last_paid date,
+  status text not null default 'active' check (status in ('active', 'paused', 'cancelled')),
+  category_id uuid references categories(id) on delete set null,
+  account_id uuid references accounts(id) on delete set null,
+  payment_method_id uuid references payment_methods(id) on delete set null,
+  notes text,
+  created_at timestamptz default now(),
+  unique (user_id, name)
+);
+
 create table if not exists budgets (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid(),
@@ -109,6 +128,7 @@ alter table accounts enable row level security;
 alter table tags enable row level security;
 alter table transactions enable row level security;
 alter table transaction_tags enable row level security;
+alter table subscriptions enable row level security;
 alter table budgets enable row level security;
 alter table funds enable row level security;
 alter table fund_contributions enable row level security;
@@ -129,6 +149,9 @@ create policy "Transactions are user-owned" on transactions
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create policy "Transaction tags are user-owned" on transaction_tags
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "Subscriptions are user-owned" on subscriptions
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create policy "Budgets are user-owned" on budgets

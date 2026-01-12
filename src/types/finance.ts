@@ -66,3 +66,21 @@ export type FundContribution = {
   note: string | null;
   fund_name?: string | null;
 };
+
+export type SubscriptionStatus = "active" | "paused" | "cancelled";
+
+export type Subscription = {
+  id: string;
+  name: string;
+  amount: number;
+  currency: string;
+  interval_months: number;
+  billing_anchor: string;
+  next_due: string;
+  last_paid: string | null;
+  status: SubscriptionStatus;
+  category_id: string | null;
+  account_id: string | null;
+  payment_method_id: string | null;
+  notes: string | null;
+};

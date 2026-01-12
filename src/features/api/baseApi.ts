@@ -13,6 +13,7 @@ export const apiSlice = createApi({
     "Tags",
     "Funds",
     "FundContributions",
+    "Subscriptions",
   ],
   endpoints: () => ({}),
 });

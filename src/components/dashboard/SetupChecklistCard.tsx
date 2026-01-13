@@ -28,6 +28,7 @@ export const SetupChecklistCard = ({ items, style }: SetupChecklistCardProps) =>
       shadow="sm"
       radius="lg"
       p="md"
+      className="dashboard-priority-card dashboard-checklist-card"
       style={{ display: "flex", flexDirection: "column", ...style }}
     >
       <Group justify="space-between" align="center" mb="sm" wrap="wrap">

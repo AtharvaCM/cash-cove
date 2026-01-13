@@ -157,6 +157,60 @@ p {
   min-width: 0;
 }
 
+.dashboard-priority-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+      135deg,
+      rgba(30, 136, 229, 0.08),
+      rgba(38, 166, 154, 0.06)
+    ),
+    var(--surface);
+  border-color: rgba(30, 136, 229, 0.2);
+  box-shadow: var(--shadow-soft);
+}
+
+.dashboard-priority-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  border: 1px solid rgba(30, 136, 229, 0.16);
+}
+
+.dashboard-checkin-card {
+  border-left: 4px solid var(--accent);
+}
+
+.dashboard-checklist-card {
+  border-left: 4px solid var(--accent-2);
+}
+
+.dashboard-attention-strip {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+      135deg,
+      rgba(249, 168, 37, 0.12),
+      rgba(229, 122, 68, 0.06)
+    ),
+    var(--surface);
+  border-color: rgba(249, 168, 37, 0.3);
+  box-shadow: var(--shadow-soft);
+}
+
+.dashboard-attention-strip::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--warning), #e57a44);
+  opacity: 0.8;
+}
+
 .card {
   background: var(--surface);
   border-radius: 16px;

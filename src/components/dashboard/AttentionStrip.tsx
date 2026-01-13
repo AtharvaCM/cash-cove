@@ -22,7 +22,7 @@ export const AttentionStrip = ({ items }: AttentionStripProps) => {
   const count = items.length;
 
   return (
-    <Paper withBorder shadow="sm" radius="lg" p="md">
+    <Paper withBorder shadow="sm" radius="lg" p="md" className="dashboard-attention-strip">
       <Group justify="space-between" align="center" mb="sm" wrap="wrap">
         <Stack gap={2}>
           <Title order={4}>Attention</Title>

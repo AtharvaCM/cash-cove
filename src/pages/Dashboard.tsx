@@ -1,8 +1,8 @@
-import { Group, Stack, Switch, Text } from "@mantine/core";
+import { Button, Group, Paper, Stack, Switch, Text } from "@mantine/core";
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, SlidersHorizontal } from "lucide-react";
 import { ChartsSection } from "../components/dashboard/ChartsSection";
 import { OverviewCards } from "../components/dashboard/OverviewCards";
 import { WeeklyCheckInCard } from "../components/dashboard/WeeklyCheckInCard";
@@ -15,12 +15,67 @@ import { CoverageCard } from "../components/dashboard/CoverageCard";
 import { NetCashflowCard } from "../components/dashboard/NetCashflowCard";
 import { ForecastCard } from "../components/dashboard/ForecastCard";
 import { UpcomingSubscriptionsCard } from "../components/dashboard/UpcomingSubscriptionsCard";
+import {
+  DashboardPinsModal,
+  type DashboardPinOption,
+} from "../components/dashboard/DashboardPinsModal";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { useWeeklyCheckIn } from "../hooks/useWeeklyCheckIn";
 import { useSetupChecklist } from "../hooks/useSetupChecklist";
 import { useAttentionItems } from "../hooks/useAttentionItems";
+import { useDashboardPins } from "../hooks/useDashboardPins";
 import { useGetAccountsQuery, useGetSubscriptionsQuery } from "../features/api/apiSlice";
 import { getUpcomingSubscriptions, isSubscriptionOverdue } from "../lib/subscriptions";
+
+const PIN_OPTIONS: DashboardPinOption[] = [
+  {
+    id: "setup-checklist",
+    label: "Setup checklist",
+    description: "Finish the basics to unlock smarter insights. Shows until complete.",
+  },
+  {
+    id: "weekly-checkin",
+    label: "Weekly check-in",
+    description: "Top insights and one action to try this week.",
+  },
+  {
+    id: "attention",
+    label: "Attention strip",
+    description: "Overdue bills, budget warnings, and missing data.",
+  },
+  {
+    id: "accounts",
+    label: "Account balances",
+    description: "Balances across bank, credit card, cash, and wallet.",
+  },
+  {
+    id: "soft-cap",
+    label: "Budget alerts",
+    description: "Categories nearing or over budget.",
+  },
+  {
+    id: "coverage",
+    label: "Coverage",
+    description: "Cash vs allocated funds coverage.",
+  },
+  {
+    id: "net-cashflow",
+    label: "Net cashflow",
+    description: "This month's inflow vs outflow.",
+  },
+  {
+    id: "forecast",
+    label: "Forecast",
+    description: "Runway and recurring impact.",
+  },
+  {
+    id: "upcoming-subscriptions",
+    label: "Upcoming renewals",
+    description: "Bills due in the next 30 days.",
+  },
+];
+
+const PIN_IDS = PIN_OPTIONS.map((option) => option.id);
 
 export const Dashboard = () => {
   const [rollupCategories, setRollupCategories] = useState(() => {
@@ -39,6 +94,7 @@ export const Dashboard = () => {
       return true;
     }
   });
+  const [pinsModalOpen, setPinsModalOpen] = useState(false);
   const [hideBalances, setHideBalances] = useState(() => {
     if (typeof window === "undefined") {
       return true;
@@ -54,6 +110,10 @@ export const Dashboard = () => {
     } catch {
       return true;
     }
+  });
+  const { pinned, isPinned, togglePin, resetPins } = useDashboardPins({
+    availableIds: PIN_IDS,
+    defaultPins: PIN_IDS,
   });
   const { data: accounts = [], isLoading: isAccountsLoading } =
     useGetAccountsQuery();
@@ -160,6 +220,35 @@ export const Dashboard = () => {
     transactionsCount: transactions.length,
     accountsCount: accounts.length,
   });
+  const showSetupChecklistCard =
+    showSetupChecklist && isPinned("setup-checklist");
+  const showWeeklyCheckInCard = isPinned("weekly-checkin");
+  const showAttentionStrip = isPinned("attention");
+  const showAccountBalances = isPinned("accounts");
+  const showSoftCapAlerts = isPinned("soft-cap");
+  const showCoverageCard = isPinned("coverage");
+  const showNetCashflowCard = isPinned("net-cashflow");
+  const showForecastCard = isPinned("forecast");
+  const showUpcomingSubscriptionsCard = isPinned("upcoming-subscriptions");
+  const showPriorityGroup = showSetupChecklistCard || showWeeklyCheckInCard;
+  const showBalanceGroup = showAccountBalances || showSoftCapAlerts;
+  const showPlanningGroup =
+    showCoverageCard ||
+    showNetCashflowCard ||
+    showForecastCard ||
+    showUpcomingSubscriptionsCard;
+  const visiblePinnedCount = [
+    showSetupChecklistCard,
+    showWeeklyCheckInCard,
+    showAttentionStrip,
+    showAccountBalances,
+    showSoftCapAlerts,
+    showCoverageCard,
+    showNetCashflowCard,
+    showForecastCard,
+    showUpcomingSubscriptionsCard,
+  ].filter(Boolean).length;
+  const hasPinnedSelections = pinned.length > 0;
   const sectionStyle = (delayMs: number): CSSProperties => ({
     "--dash-delay": `${delayMs}ms`,
   } as CSSProperties);
@@ -206,67 +295,145 @@ export const Dashboard = () => {
       />
 
       <Group
-        align="stretch"
-        grow
+        justify="space-between"
+        align="center"
         wrap="wrap"
-        gap="md"
+        gap="xs"
         className="dashboard-section"
-        style={sectionStyle(40)}
+        style={sectionStyle(20)}
       >
-        {showSetupChecklist ? (
-          <SetupChecklistCard
-            items={setupItems}
-            style={{ ...sectionStyle(80), flex: "1 1 320px" }}
-          />
-        ) : null}
-        <WeeklyCheckInCard
-          insights={weeklyInsights}
-          nudge={weeklyNudge}
-          style={{ ...sectionStyle(120), flex: "1 1 320px" }}
-        />
+        <Stack gap={2}>
+          <Text fw={600}>Pinned cards</Text>
+          <Text size="sm" c="dimmed">
+            Pick the cards you want to see first.
+          </Text>
+        </Stack>
+        <Group gap="xs" align="center" wrap="wrap">
+          <Text size="xs" c="dimmed">
+            {pinned.length} of {PIN_OPTIONS.length} pinned
+          </Text>
+          <Button
+            variant="light"
+            size="xs"
+            leftSection={<SlidersHorizontal size={14} />}
+            onClick={() => setPinsModalOpen(true)}
+          >
+            Customize
+          </Button>
+        </Group>
       </Group>
 
-      <AttentionStrip items={attentionItems} style={sectionStyle(160)} />
+      {visiblePinnedCount === 0 ? (
+        <Paper
+          withBorder
+          shadow="sm"
+          radius="lg"
+          p="md"
+          className="dashboard-section"
+          style={sectionStyle(60)}
+        >
+          <Stack gap="xs">
+            <Text fw={600}>
+              {hasPinnedSelections ? "No pinned cards to show" : "No pinned cards yet"}
+            </Text>
+            <Text size="sm" c="dimmed">
+              {hasPinnedSelections
+                ? "Adjust your pins to bring a card back to the top of the dashboard."
+                : "Choose the cards you want to see at the top of your dashboard."}
+            </Text>
+            <Button variant="light" size="xs" onClick={() => setPinsModalOpen(true)}>
+              {hasPinnedSelections ? "Adjust pins" : "Choose cards"}
+            </Button>
+          </Stack>
+        </Paper>
+      ) : (
+        <>
+          {showPriorityGroup ? (
+            <Group
+              align="stretch"
+              grow
+              wrap="wrap"
+              gap="md"
+              className="dashboard-section"
+              style={sectionStyle(40)}
+            >
+              {showSetupChecklistCard ? (
+                <SetupChecklistCard
+                  items={setupItems}
+                  style={{ ...sectionStyle(80), flex: "1 1 320px" }}
+                />
+              ) : null}
+              {showWeeklyCheckInCard ? (
+                <WeeklyCheckInCard
+                  insights={weeklyInsights}
+                  nudge={weeklyNudge}
+                  style={{ ...sectionStyle(120), flex: "1 1 320px" }}
+                />
+              ) : null}
+            </Group>
+          ) : null}
 
-      <Group align="stretch" grow wrap="wrap" gap="md">
-        <AccountBalances
-          accounts={accounts}
-          hidden={hideBalances}
-          onToggle={() => setHideBalances((prev) => !prev)}
-          loading={isAccountsLoading}
-          icon={hideBalances ? <Eye size={16} /> : <EyeOff size={16} />}
-          style={{ flex: "1 1 320px" }}
-        />
-        <SoftCapAlerts
-          warnings={warnings}
-          hasBudgets={hasBudgets}
-          style={{ flex: "1 1 320px" }}
-        />
-      </Group>
+          {showAttentionStrip ? (
+            <AttentionStrip items={attentionItems} style={sectionStyle(160)} />
+          ) : null}
 
-      <Group align="stretch" grow wrap="wrap" gap="md">
-        <CoverageCard
-          cashOnHand={cashOnHand}
-          funds={funds}
-          style={{ flex: "1 1 320px" }}
-        />
-        <NetCashflowCard
-          income={incomeTotal}
-          expense={expenseTotal}
-          style={{ flex: "1 1 320px" }}
-        />
-        <ForecastCard
-          cashOnHand={cashOnHand}
-          avgDailySpend={avgDailySpend}
-          recurringIncome={recurringIncome}
-          recurringExpense={recurringExpense}
-          style={{ flex: "1 1 320px" }}
-        />
-        <UpcomingSubscriptionsCard
-          subscriptions={subscriptions}
-          style={{ flex: "1 1 320px" }}
-        />
-      </Group>
+          {showBalanceGroup ? (
+            <Group align="stretch" grow wrap="wrap" gap="md">
+              {showAccountBalances ? (
+                <AccountBalances
+                  accounts={accounts}
+                  hidden={hideBalances}
+                  onToggle={() => setHideBalances((prev) => !prev)}
+                  loading={isAccountsLoading}
+                  icon={hideBalances ? <Eye size={16} /> : <EyeOff size={16} />}
+                  style={{ flex: "1 1 320px" }}
+                />
+              ) : null}
+              {showSoftCapAlerts ? (
+                <SoftCapAlerts
+                  warnings={warnings}
+                  hasBudgets={hasBudgets}
+                  style={{ flex: "1 1 320px" }}
+                />
+              ) : null}
+            </Group>
+          ) : null}
+
+          {showPlanningGroup ? (
+            <Group align="stretch" grow wrap="wrap" gap="md">
+              {showCoverageCard ? (
+                <CoverageCard
+                  cashOnHand={cashOnHand}
+                  funds={funds}
+                  style={{ flex: "1 1 320px" }}
+                />
+              ) : null}
+              {showNetCashflowCard ? (
+                <NetCashflowCard
+                  income={incomeTotal}
+                  expense={expenseTotal}
+                  style={{ flex: "1 1 320px" }}
+                />
+              ) : null}
+              {showForecastCard ? (
+                <ForecastCard
+                  cashOnHand={cashOnHand}
+                  avgDailySpend={avgDailySpend}
+                  recurringIncome={recurringIncome}
+                  recurringExpense={recurringExpense}
+                  style={{ flex: "1 1 320px" }}
+                />
+              ) : null}
+              {showUpcomingSubscriptionsCard ? (
+                <UpcomingSubscriptionsCard
+                  subscriptions={subscriptions}
+                  style={{ flex: "1 1 320px" }}
+                />
+              ) : null}
+            </Group>
+          ) : null}
+        </>
+      )}
       <Group justify="space-between" align="center" wrap="wrap" gap="xs">
         <Text size="sm" c="dimmed" maw={{ base: "100%", sm: "70%" }}>
           Charts show subcategories rolled into their parent when enabled.
@@ -284,6 +451,14 @@ export const Dashboard = () => {
         transactions={transactions}
         categoryMap={categoryMap}
         isLoading={isLoading}
+      />
+      <DashboardPinsModal
+        opened={pinsModalOpen}
+        onClose={() => setPinsModalOpen(false)}
+        options={PIN_OPTIONS}
+        pinnedIds={pinned}
+        onToggle={togglePin}
+        onReset={resetPins}
       />
     </Stack>
   );

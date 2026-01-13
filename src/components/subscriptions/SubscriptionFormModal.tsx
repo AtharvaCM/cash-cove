@@ -11,8 +11,9 @@ import {
   Textarea,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import dayjs from "dayjs";
 import {
   useAddSubscriptionMutation,
   useDeleteSubscriptionMutation,
@@ -60,6 +61,23 @@ const buildInitialForm = (subscription?: Subscription | null) => {
   };
 };
 
+const computeNextDueDate = (anchor: string, intervalMonths: number) => {
+  if (!anchor || !Number.isFinite(intervalMonths) || intervalMonths <= 0) {
+    return "";
+  }
+  const anchorDate = dayjs(anchor);
+  if (!anchorDate.isValid()) {
+    return "";
+  }
+  const today = dayjs().startOf("day");
+  if (anchorDate.isAfter(today, "day") || anchorDate.isSame(today, "day")) {
+    return anchorDate.format("YYYY-MM-DD");
+  }
+  const monthsDiff = today.diff(anchorDate, "month", true);
+  const cycles = Math.max(1, Math.ceil(monthsDiff / intervalMonths));
+  return anchorDate.add(cycles * intervalMonths, "month").format("YYYY-MM-DD");
+};
+
 export const SubscriptionFormModal = ({
   opened,
   onClose,
@@ -69,6 +87,9 @@ export const SubscriptionFormModal = ({
   paymentMethods,
 }: SubscriptionFormModalProps) => {
   const [form, setForm] = useState(() => buildInitialForm(subscription));
+  const [isNextDueManual, setIsNextDueManual] = useState(
+    () => Boolean(subscription?.next_due)
+  );
   const [error, setError] = useState<string | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -110,6 +131,33 @@ export const SubscriptionFormModal = ({
     cadenceValue === "custom"
       ? Number(form.custom_interval)
       : Number(cadenceValue);
+  const autoNextDue = useMemo(
+    () => computeNextDueDate(form.billing_anchor, intervalMonths),
+    [form.billing_anchor, intervalMonths]
+  );
+  const nextDuePreview = useMemo(() => {
+    if (!form.next_due) {
+      return null;
+    }
+    return dayjs(form.next_due).format("DD MMM YYYY");
+  }, [form.next_due]);
+
+  useEffect(() => {
+    if (isNextDueManual) {
+      return;
+    }
+    if (!autoNextDue) {
+      setForm((prev) =>
+        prev.next_due ? { ...prev, next_due: "" } : prev
+      );
+      return;
+    }
+    setForm((prev) =>
+      prev.next_due === autoNextDue
+        ? prev
+        : { ...prev, next_due: autoNextDue }
+    );
+  }, [autoNextDue, isNextDueManual]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -223,9 +271,10 @@ export const SubscriptionFormModal = ({
             <Select
               label="Billing cadence"
               value={cadenceValue}
-              onChange={(value) =>
-                setForm((prev) => ({ ...prev, cadence: value || "1" }))
-              }
+              onChange={(value) => {
+                setForm((prev) => ({ ...prev, cadence: value || "1" }));
+                setIsNextDueManual(false);
+              }}
               data={cadenceOptions}
               required
             />
@@ -235,12 +284,13 @@ export const SubscriptionFormModal = ({
               label="Repeat every (months)"
               type="number"
               value={form.custom_interval}
-              onChange={(event) =>
+              onChange={(event) => {
                 setForm((prev) => ({
                   ...prev,
                   custom_interval: event.target.value,
-                }))
-              }
+                }));
+                setIsNextDueManual(false);
+              }}
               placeholder="e.g. 2"
               min="1"
               step="1"
@@ -251,31 +301,41 @@ export const SubscriptionFormModal = ({
             <DateInput
               label="First billed on"
               value={form.billing_anchor ? new Date(form.billing_anchor) : null}
-              onChange={(value) =>
+              onChange={(value) => {
                 setForm((prev) => ({
                   ...prev,
                   billing_anchor: value
                     ? new Date(value).toISOString().slice(0, 10)
                     : "",
-                }))
-              }
+                }));
+                setIsNextDueManual(false);
+              }}
               clearable
             />
             <DateInput
               label="Next due date"
               value={form.next_due ? new Date(form.next_due) : null}
-              onChange={(value) =>
+              onChange={(value) => {
                 setForm((prev) => ({
                   ...prev,
                   next_due: value
                     ? new Date(value).toISOString().slice(0, 10)
                     : "",
-                }))
-              }
+                }));
+                if (value) {
+                  setIsNextDueManual(true);
+                }
+              }}
               clearable={false}
               required
             />
           </SimpleGrid>
+          {nextDuePreview ? (
+            <Text size="xs" c="dimmed">
+              Next charge on {nextDuePreview}
+              {!isNextDueManual ? " (auto)" : ""}
+            </Text>
+          ) : null}
           <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
             <Select
               label="Category"

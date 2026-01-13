@@ -1,11 +1,11 @@
 import {
-  Alert,
   Badge,
   Button,
   Group,
   Paper,
   SimpleGrid,
   Stack,
+  Switch,
   Text,
   Title,
 } from "@mantine/core";
@@ -51,7 +51,14 @@ export const Subscriptions = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [postingId, setPostingId] = useState<string | null>(null);
-  const [postError, setPostError] = useState<string | null>(null);
+  const [postErrors, setPostErrors] = useState<Record<string, string>>({});
+  const [needsAccountOnly, setNeedsAccountOnly] = useState(false);
+  const [isBulkPosting, setIsBulkPosting] = useState(false);
+  const [bulkSummary, setBulkSummary] = useState<{
+    total: number;
+    success: number;
+    failed: number;
+  } | null>(null);
 
   const { data: subscriptions = [], isLoading } = useGetSubscriptionsQuery();
   const { data: categories = [] } = useGetCategoriesQuery();
@@ -95,6 +102,24 @@ export const Subscriptions = () => {
     () => upcoming.reduce((sum, sub) => sum + sub.amount, 0),
     [upcoming]
   );
+  const dueThisWeek = useMemo(() => {
+    const today = dayjs().startOf("day");
+    return subscriptions.filter((sub) => {
+      if (sub.status !== "active" || !sub.next_due) {
+        return false;
+      }
+      const daysAway = dayjs(sub.next_due).diff(today, "day");
+      return daysAway >= 0 && daysAway <= 7;
+    });
+  }, [subscriptions]);
+  const dueThisWeekEligible = useMemo(
+    () => dueThisWeek.filter((sub) => sub.account_id),
+    [dueThisWeek]
+  );
+  const dueThisWeekNeedsAccount = useMemo(
+    () => dueThisWeek.filter((sub) => !sub.account_id).length,
+    [dueThisWeek]
+  );
 
   const rows = useMemo<SubscriptionRow[]>(
     () =>
@@ -116,23 +141,40 @@ export const Subscriptions = () => {
       })),
     [subscriptions, accountMap, categoryMap, paymentMap]
   );
+  const filteredRows = useMemo(
+    () => (needsAccountOnly ? rows.filter((row) => !row.hasAccount) : rows),
+    [rows, needsAccountOnly]
+  );
 
   const handlePostPayment = useCallback(
     async (subscriptionId: string) => {
       const subscription = subscriptionMap.get(subscriptionId);
       if (!subscription) {
-        return;
+        return false;
       }
-      setPostError(null);
+      setPostErrors((prev) => {
+        if (!prev[subscriptionId]) {
+          return prev;
+        }
+        const { [subscriptionId]: _ignored, ...rest } = prev;
+        return rest;
+      });
 
       if (!subscription.account_id) {
-        setPostError("Select an account before posting a subscription payment.");
-        return;
+        setPostErrors((prev) => ({
+          ...prev,
+          [subscriptionId]:
+            "Select an account before posting a subscription payment.",
+        }));
+        return false;
       }
 
       if (!subscription.next_due) {
-        setPostError("Subscription needs a next due date before posting.");
-        return;
+        setPostErrors((prev) => ({
+          ...prev,
+          [subscriptionId]: "Subscription needs a next due date before posting.",
+        }));
+        return false;
       }
 
       setPostingId(subscription.id);
@@ -161,14 +203,49 @@ export const Subscriptions = () => {
           last_paid: subscription.next_due,
           next_due: nextDue,
         }).unwrap();
+        setPostErrors((prev) => {
+          if (!prev[subscriptionId]) {
+            return prev;
+          }
+          const { [subscriptionId]: _ignored, ...rest } = prev;
+          return rest;
+        });
+        return true;
       } catch {
-        setPostError("Unable to post the subscription payment.");
+        setPostErrors((prev) => ({
+          ...prev,
+          [subscriptionId]: "Unable to post the subscription payment.",
+        }));
+        return false;
       } finally {
         setPostingId(null);
       }
     },
     [addTransaction, subscriptionMap, updateSubscription]
   );
+  const handleBulkPost = useCallback(async () => {
+    if (isBulkPosting || dueThisWeekEligible.length === 0) {
+      return;
+    }
+    setIsBulkPosting(true);
+    setBulkSummary(null);
+    let success = 0;
+    let failed = 0;
+    for (const subscription of dueThisWeekEligible) {
+      const ok = await handlePostPayment(subscription.id);
+      if (ok) {
+        success += 1;
+      } else {
+        failed += 1;
+      }
+    }
+    setBulkSummary({
+      total: success + failed,
+      success,
+      failed,
+    });
+    setIsBulkPosting(false);
+  }, [dueThisWeekEligible, handlePostPayment, isBulkPosting]);
 
   const columns = useMemo<ColDef<SubscriptionRow>[]>(
     () => [
@@ -250,26 +327,37 @@ export const Subscriptions = () => {
             return null;
           }
           const disabled =
-            row.status !== "active" || !row.hasAccount || Boolean(postingId);
+            row.status !== "active" ||
+            !row.hasAccount ||
+            Boolean(postingId) ||
+            isBulkPosting;
+          const rowError = postErrors[row.id];
           return (
-            <Button
-              size="xs"
-              variant="light"
-              leftSection={<CheckCircle2 size={14} strokeWidth={2} />}
-              disabled={disabled}
-              loading={postingId === row.id}
-              onClick={(event) => {
-                event.stopPropagation();
-                handlePostPayment(row.id);
-              }}
-            >
-              Post payment
-            </Button>
+            <Stack gap={4}>
+              <Button
+                size="xs"
+                variant="light"
+                leftSection={<CheckCircle2 size={14} strokeWidth={2} />}
+                disabled={disabled}
+                loading={postingId === row.id}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handlePostPayment(row.id);
+                }}
+              >
+                Post payment
+              </Button>
+              {rowError ? (
+                <Text size="xs" c="red.6">
+                  {rowError}
+                </Text>
+              ) : null}
+            </Stack>
           );
         },
       },
     ],
-    [handlePostPayment, postingId]
+    [handlePostPayment, isBulkPosting, postErrors, postingId]
   );
 
   const handleOpenCreate = () => {
@@ -290,6 +378,25 @@ export const Subscriptions = () => {
   const formKey = `${selectedSubscription?.id ?? "new"}-${
     isFormOpen ? "open" : "closed"
   }`;
+  const dueThisWeekLabel =
+    dueThisWeekEligible.length > 0
+      ? `Post all due this week (${dueThisWeekEligible.length})`
+      : "Post all due this week";
+  const countLabel = needsAccountOnly
+    ? `${filteredRows.length} of ${subscriptions.length} need an account`
+    : `${subscriptions.length} items`;
+  const emptyLabel = needsAccountOnly
+    ? "All subscriptions have accounts."
+    : "No subscriptions tracked yet.";
+  const bulkSummaryLabel = bulkSummary
+    ? bulkSummary.failed === 0
+      ? `Posted ${bulkSummary.success} payment${
+          bulkSummary.success === 1 ? "" : "s"
+        }.`
+      : `Posted ${bulkSummary.success}/${bulkSummary.total}. ${bulkSummary.failed} failed.`
+    : null;
+  const bulkSummaryColor =
+    bulkSummary && bulkSummary.failed === 0 ? "teal.7" : "orange.6";
 
   return (
     <Stack gap="lg">
@@ -334,28 +441,54 @@ export const Subscriptions = () => {
           <Stack gap={2}>
             <Title order={4}>Subscriptions</Title>
             <Text size="sm" c="dimmed">
-              {subscriptions.length} items
+              {countLabel}
             </Text>
             <Text size="xs" c="dimmed">
               Click a row to edit or delete.
             </Text>
           </Stack>
           <Group gap="sm" wrap="wrap">
-            <Button leftSection={<Plus size={16} strokeWidth={2} />} onClick={handleOpenCreate}>
+            <Switch
+              size="sm"
+              label="Needs account"
+              checked={needsAccountOnly}
+              onChange={(event) =>
+                setNeedsAccountOnly(event.currentTarget.checked)
+              }
+            />
+            <Stack gap={4} align="flex-end">
+              <Button
+                variant="light"
+                loading={isBulkPosting}
+                disabled={dueThisWeekEligible.length === 0}
+                onClick={handleBulkPost}
+              >
+                {dueThisWeekLabel}
+              </Button>
+              {dueThisWeekNeedsAccount > 0 ? (
+                <Text size="xs" c="dimmed">
+                  {dueThisWeekNeedsAccount} due this week need an account
+                </Text>
+              ) : null}
+              {bulkSummaryLabel ? (
+                <Text size="xs" c={bulkSummaryColor}>
+                  {bulkSummaryLabel}
+                </Text>
+              ) : null}
+            </Stack>
+            <Button
+              leftSection={<Plus size={16} strokeWidth={2} />}
+              onClick={handleOpenCreate}
+            >
               Add subscription
             </Button>
           </Group>
         </Group>
-        {postError ? (
-          <Alert color="red" variant="light" mb="sm">
-            {postError}
-          </Alert>
-        ) : null}
         <DatatrixTable
-          rows={rows}
+          rows={filteredRows}
           columns={columns}
           height="max(420px, calc(100vh - 320px))"
-          emptyLabel="No subscriptions tracked yet."
+          emptyLabel={emptyLabel}
           loading={isLoading}
           getRowId={(row) => row.id}
           onRowClick={(row) => handleEditSubscription(row.id)}

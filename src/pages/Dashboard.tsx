@@ -4,7 +4,9 @@ import dayjs from "dayjs";
 import { Eye, EyeOff } from "lucide-react";
 import { ChartsSection } from "../components/dashboard/ChartsSection";
 import { OverviewCards } from "../components/dashboard/OverviewCards";
-import { AttentionStrip, type AttentionItem } from "../components/dashboard/AttentionStrip";
+import { WeeklyCheckInCard } from "../components/dashboard/WeeklyCheckInCard";
+import { SetupChecklistCard } from "../components/dashboard/SetupChecklistCard";
+import { AttentionStrip } from "../components/dashboard/AttentionStrip";
 import { SoftCapAlerts } from "../components/dashboard/SoftCapAlerts";
 import { RecentActivityTable } from "../components/dashboard/RecentActivityTable";
 import { AccountBalances } from "../components/dashboard/AccountBalances";
@@ -13,6 +15,9 @@ import { NetCashflowCard } from "../components/dashboard/NetCashflowCard";
 import { ForecastCard } from "../components/dashboard/ForecastCard";
 import { UpcomingSubscriptionsCard } from "../components/dashboard/UpcomingSubscriptionsCard";
 import { useDashboardData } from "../hooks/useDashboardData";
+import { useWeeklyCheckIn } from "../hooks/useWeeklyCheckIn";
+import { useSetupChecklist } from "../hooks/useSetupChecklist";
+import { useAttentionItems } from "../hooks/useAttentionItems";
 import { useGetAccountsQuery, useGetSubscriptionsQuery } from "../features/api/apiSlice";
 import { getUpcomingSubscriptions, isSubscriptionOverdue } from "../lib/subscriptions";
 
@@ -24,6 +29,7 @@ export const Dashboard = () => {
   const { data: subscriptions = [] } = useGetSubscriptionsQuery();
   const {
     monthLabel,
+    categories,
     transactions,
     isLoading,
     hasBudgets,
@@ -35,6 +41,8 @@ export const Dashboard = () => {
     totalSpent,
     totalBudget,
     funds,
+    categoryTotals,
+    categoryBudgets,
   } = useDashboardData({ rollupCategories });
   const previousMonth = dayjs().subtract(1, "month").format("YYYY-MM");
   const {
@@ -74,108 +82,53 @@ export const Dashboard = () => {
       .reduce((sum, tx) => sum + tx.amount, 0);
     return { recurringIncome: income, recurringExpense: expense };
   }, [transactions]);
-  const dueSoonSubscriptions = useMemo(
+  const dueSoonCount = useMemo(
     () =>
       getUpcomingSubscriptions(subscriptions, 7).filter(
         (sub) => sub.status === "active" && !isSubscriptionOverdue(sub)
-      ),
+      ).length,
     [subscriptions]
   );
-  const overdueSubscriptions = useMemo(
+  const overdueCount = useMemo(
     () =>
       subscriptions.filter(
         (sub) =>
           sub.status === "active" &&
           sub.next_due &&
           isSubscriptionOverdue(sub)
-      ),
+      ).length,
     [subscriptions]
   );
-  const attentionItems = useMemo<AttentionItem[]>(() => {
-    const items: AttentionItem[] = [];
-
-    if (!hasBudgets) {
-      items.push({
-        id: "no-budgets",
-        title: "No budgets yet",
-        description: "Set monthly budgets to unlock soft-cap alerts.",
-        badge: "Budgets",
-        tone: "blue",
-        action: { label: "Set budgets", to: "/budgets" },
-      });
-    } else if (warnings.length > 0) {
-      items.push({
-        id: "budget-warnings",
-        title: "Spending near budget caps",
-        description: `${warnings.length} categories are at 80% or higher.`,
-        badge: `${warnings.length} caps`,
-        tone: "orange",
-        action: { label: "Review budgets", to: "/budgets" },
-      });
-    }
-
-    if (overdueSubscriptions.length > 0) {
-      items.push({
-        id: "overdue-subscriptions",
-        title: "Overdue subscriptions",
-        description: `${overdueSubscriptions.length} payments are past due.`,
-        badge: `${overdueSubscriptions.length} overdue`,
-        tone: "red",
-        action: { label: "Review subscriptions", to: "/subscriptions" },
-      });
-    } else if (dueSoonSubscriptions.length > 0) {
-      items.push({
-        id: "due-soon-subscriptions",
-        title: "Subscriptions due soon",
-        description: `${dueSoonSubscriptions.length} payments due within 7 days.`,
-        badge: `${dueSoonSubscriptions.length} due`,
-        tone: "yellow",
-        action: { label: "Review subscriptions", to: "/subscriptions" },
-      });
-    } else if (subscriptions.length === 0) {
-      items.push({
-        id: "no-subscriptions",
-        title: "No subscriptions tracked",
-        description: "Add recurring bills to forecast renewals.",
-        badge: "Subscriptions",
-        tone: "blue",
-        action: { label: "Add subscriptions", to: "/subscriptions" },
-      });
-    }
-
-    if (!isLoading && transactions.length === 0) {
-      items.push({
-        id: "no-transactions",
-        title: "No transactions this month",
-        description: "Log expenses or import data to populate your dashboard.",
-        badge: "Transactions",
-        tone: "blue",
-        action: { label: "Add transactions", to: "/transactions" },
-      });
-    }
-
-    if (accounts.length === 0) {
-      items.push({
-        id: "no-accounts",
-        title: "No accounts connected",
-        description: "Add bank, card, or cash balances to see coverage.",
-        badge: "Accounts",
-        tone: "blue",
-        action: { label: "Add accounts", to: "/settings" },
-      });
-    }
-
-    return items;
-  }, [
-    accounts.length,
-    dueSoonSubscriptions.length,
+  const { insights: weeklyInsights, nudge: weeklyNudge } = useWeeklyCheckIn({
+    transactionsCount: transactions.length,
+    totalBudget,
+    totalSpent,
+    categoryTotals,
+    categoryBudgets,
+    categoryMap,
+    avgDailySpend,
+    incomeTotal,
+    expenseTotal,
     hasBudgets,
+    warnings,
+    dueSoonSubscriptionsCount: dueSoonCount,
+  });
+  const { items: setupItems, showSetupChecklist } = useSetupChecklist({
+    accountsCount: accounts.length,
+    categoriesCount: categories.length,
+    hasBudgets,
+    subscriptionsCount: subscriptions.length,
+  });
+  const attentionItems = useAttentionItems({
+    hasBudgets,
+    warnings,
+    overdueCount,
+    dueSoonCount,
+    subscriptionsCount: subscriptions.length,
     isLoading,
-    overdueSubscriptions.length,
-    subscriptions.length,
-    transactions.length,
-    warnings.length,
-  ]);
+    transactionsCount: transactions.length,
+    accountsCount: accounts.length,
+  });
   return (
     <Stack gap="lg">
       <OverviewCards
@@ -189,6 +142,20 @@ export const Dashboard = () => {
         previousTotalBudget={previousTotalBudget}
         hasPreviousMonthData={hasPreviousMonthData}
       />
+
+      <Group align="stretch" grow wrap="wrap" gap="md">
+        {showSetupChecklist ? (
+          <SetupChecklistCard
+            items={setupItems}
+            style={{ flex: "1 1 320px" }}
+          />
+        ) : null}
+        <WeeklyCheckInCard
+          insights={weeklyInsights}
+          nudge={weeklyNudge}
+          style={{ flex: "1 1 320px" }}
+        />
+      </Group>
 
       <AttentionStrip items={attentionItems} />
 

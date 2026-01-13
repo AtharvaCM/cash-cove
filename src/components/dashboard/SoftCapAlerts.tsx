@@ -1,5 +1,5 @@
-import { Badge, Button, Group, Paper, Stack, Text, Title } from "@mantine/core";
-import { Link } from "react-router-dom";
+import { Badge, Group, Paper, Stack, Text, Title } from "@mantine/core";
+import { EmptyState } from "../common/EmptyState";
 import { formatINR } from "../../lib/format";
 import type { BudgetWarning } from "../../lib/dashboard";
 
@@ -29,19 +29,13 @@ export const SoftCapAlerts = ({ warnings, hasBudgets, style }: SoftCapAlertsProp
       </Badge>
     </Group>
     {!hasBudgets && (
-      <Stack gap="xs">
-        <Text size="sm" c="dimmed">
-          Set budgets to activate alerts.
-        </Text>
-        <Button component={Link} to="/budgets" variant="light" size="xs">
-          Set budgets
-        </Button>
-      </Stack>
+      <EmptyState
+        description="Set budgets to activate alerts."
+        action={{ label: "Set budgets", to: "/budgets" }}
+      />
     )}
     {hasBudgets && warnings.length === 0 && (
-      <Text size="sm" c="dimmed">
-        All clear. No caps near limit yet.
-      </Text>
+      <EmptyState description="All clear. No caps near limit yet." />
     )}
     {hasBudgets && warnings.length > 0 && (
       <Stack gap="sm">

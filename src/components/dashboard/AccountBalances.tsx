@@ -1,14 +1,13 @@
 import {
   ActionIcon,
   Badge,
-  Button,
   Group,
   Paper,
   Stack,
   Text,
   Title,
 } from "@mantine/core";
-import { Link } from "react-router-dom";
+import { EmptyState } from "../common/EmptyState";
 import { formatINR } from "../../lib/format";
 import type { Account } from "../../types/finance";
 
@@ -43,14 +42,10 @@ export const AccountBalances = ({
     );
   } else if (accounts.length === 0) {
     content = (
-      <Stack gap="xs">
-        <Text size="sm" c="dimmed">
-          No accounts yet. Add them in Settings.
-        </Text>
-        <Button component={Link} to="/settings" variant="light" size="xs">
-          Add accounts
-        </Button>
-      </Stack>
+      <EmptyState
+        description="No accounts yet. Add them in Settings."
+        action={{ label: "Add accounts", to: "/settings" }}
+      />
     );
   } else {
     content = accounts.map((account) => {

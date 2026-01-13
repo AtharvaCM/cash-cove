@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { formatINR } from "../../lib/format";
 import { chartPalette } from "../../theme";
+import { EmptyState } from "../common/EmptyState";
 
 type PieDatum = { name: string; value: number };
 type DailyDatum = { day: string; value: number };
@@ -32,9 +33,13 @@ export const ChartsSection = ({ pieData, dailyData }: ChartsSectionProps) => (
         </Text>
       </Stack>
       {pieData.length === 0 ? (
-        <Text size="sm" c="dimmed">
-          No expenses logged yet.
-        </Text>
+        <EmptyState
+          description="No expenses logged yet. Add a transaction to see the split."
+          action={{
+            label: "Add transaction",
+            to: "/transactions",
+          }}
+        />
       ) : (
         <Group align="flex-start" wrap="wrap" gap="md" style={{ width: "100%" }}>
           <div style={{ flex: "1 1 280px", minWidth: 0, maxWidth: "100%" }}>
@@ -114,9 +119,13 @@ export const ChartsSection = ({ pieData, dailyData }: ChartsSectionProps) => (
         </Text>
       ) : null}
       {dailyData.length === 0 ? (
-        <Text size="sm" c="dimmed">
-          Add a few expenses to see the trend.
-        </Text>
+        <EmptyState
+          description="Add a few expenses to see the trend."
+          action={{
+            label: "Add transaction",
+            to: "/transactions",
+          }}
+        />
       ) : (
         <ResponsiveContainer width="100%" height={280}>
           <LineChart

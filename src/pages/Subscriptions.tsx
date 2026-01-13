@@ -387,7 +387,7 @@ export const Subscriptions = () => {
     : `${subscriptions.length} items`;
   const emptyLabel = needsAccountOnly
     ? "All subscriptions have accounts."
-    : "No subscriptions tracked yet.";
+    : "No subscriptions yet. Add one to get started.";
   const bulkSummaryLabel = bulkSummary
     ? bulkSummary.failed === 0
       ? `Posted ${bulkSummary.success} payment${

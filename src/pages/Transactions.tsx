@@ -186,7 +186,7 @@ export const Transactions = () => {
           rows={rows}
           columns={columns}
           height="max(420px, calc(100vh - 280px))"
-          emptyLabel="No transactions yet for this month."
+          emptyLabel="No transactions yet. Add or import to get started."
           loading={isTransactionsLoading}
           getRowId={(row) => row.id}
           onRowClick={(row) => handleEditTransaction(row.id)}

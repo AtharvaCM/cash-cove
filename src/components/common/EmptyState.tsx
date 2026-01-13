@@ -1,0 +1,39 @@
+import { Button, Stack, Text } from "@mantine/core";
+import { Link } from "react-router-dom";
+
+type EmptyStateAction = {
+  label: string;
+  to: string;
+  variant?: "light" | "subtle" | "filled";
+  color?: string;
+};
+
+type EmptyStateProps = {
+  title?: string;
+  description: string;
+  action?: EmptyStateAction;
+};
+
+export const EmptyState = ({ title, description, action }: EmptyStateProps) => (
+  <Stack gap="xs">
+    {title ? (
+      <Text size="sm" fw={600}>
+        {title}
+      </Text>
+    ) : null}
+    <Text size="sm" c="dimmed">
+      {description}
+    </Text>
+    {action ? (
+      <Button
+        component={Link}
+        to={action.to}
+        variant={action.variant ?? "light"}
+        color={action.color ?? "blue"}
+        size="xs"
+      >
+        {action.label}
+      </Button>
+    ) : null}
+  </Stack>
+);

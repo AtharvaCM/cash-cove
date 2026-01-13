@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import dayjs from "dayjs";
 import { formatINR } from "../../lib/format";
 import { getUpcomingSubscriptions } from "../../lib/subscriptions";
+import { EmptyState } from "../common/EmptyState";
 import type { Subscription } from "../../types/finance";
 
 type UpcomingSubscriptionsCardProps = {
@@ -52,9 +53,15 @@ export const UpcomingSubscriptionsCard = ({
         <Text fw={700}>{formatINR(total)}</Text>
       </Group>
       {isEmpty ? (
-        <Text size="sm" c="dimmed">
-          Nothing due soon. Add subscriptions to track renewals.
-        </Text>
+        <EmptyState
+          description="Nothing due soon. Add subscriptions to track renewals."
+          action={{
+            label: "Add subscriptions",
+            to: "/subscriptions",
+            variant: "light",
+            color: "blue",
+          }}
+        />
       ) : (
         <Stack gap={8}>
           {upcoming.slice(0, 5).map((sub) => (
@@ -70,17 +77,19 @@ export const UpcomingSubscriptionsCard = ({
           ))}
         </Stack>
       )}
-      <Button
-        component={Link}
-        to="/subscriptions"
-        variant={isEmpty ? "light" : "subtle"}
-        color={isEmpty ? "blue" : "gray"}
-        size="xs"
-        mt="md"
-        rightSection={<ArrowUpRight size={14} />}
-      >
-        {isEmpty ? "Add subscriptions" : "View subscriptions"}
-      </Button>
+      {!isEmpty ? (
+        <Button
+          component={Link}
+          to="/subscriptions"
+          variant="subtle"
+          color="gray"
+          size="xs"
+          mt="md"
+          rightSection={<ArrowUpRight size={14} />}
+        >
+          View subscriptions
+        </Button>
+      ) : null}
     </Paper>
   );
 };

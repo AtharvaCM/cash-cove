@@ -74,7 +74,7 @@ export const RecentActivityTable = ({
         rows={recentRows}
         columns={recentColumns}
         height={recentRows.length > 0 ? 320 : undefined}
-        emptyLabel="No transactions yet for this month."
+        emptyLabel="No transactions yet. Add or import to get started."
         loading={isLoading}
       />
     </Paper>

@@ -1,4 +1,14 @@
-import { ActionIcon, Badge, Group, Paper, Stack, Text, Title } from "@mantine/core";
+import {
+  ActionIcon,
+  Badge,
+  Button,
+  Group,
+  Paper,
+  Stack,
+  Text,
+  Title,
+} from "@mantine/core";
+import { Link } from "react-router-dom";
 import { formatINR } from "../../lib/format";
 import type { Account } from "../../types/finance";
 
@@ -23,6 +33,42 @@ export const AccountBalances = ({
   style,
 }: AccountBalancesProps) => {
   const total = accounts.reduce((sum, account) => sum + (account.current_balance ?? 0), 0);
+  let content: React.ReactNode = null;
+
+  if (loading) {
+    content = (
+      <Text size="sm" c="dimmed">
+        Loading accounts...
+      </Text>
+    );
+  } else if (accounts.length === 0) {
+    content = (
+      <Stack gap="xs">
+        <Text size="sm" c="dimmed">
+          No accounts yet. Add them in Settings.
+        </Text>
+        <Button component={Link} to="/settings" variant="light" size="xs">
+          Add accounts
+        </Button>
+      </Stack>
+    );
+  } else {
+    content = accounts.map((account) => {
+      const accountTypeLabel =
+        account.type === "card" ? "Credit card" : account.type;
+      return (
+        <Group key={account.id} justify="space-between" align="center">
+          <Group gap="xs">
+            <Text fw={600}>{account.name}</Text>
+            <Badge variant="light" color="blue">
+              {accountTypeLabel}
+            </Badge>
+          </Group>
+          <Text fw={600}>{maskValue(account.current_balance ?? 0, hidden)}</Text>
+        </Group>
+      );
+    });
+  }
 
   return (
     <Paper
@@ -55,27 +101,7 @@ export const AccountBalances = ({
         <Text fw={700}>{maskValue(total, hidden)}</Text>
       </Group>
       <Stack gap={8}>
-        {loading ? (
-          <Text size="sm" c="dimmed">
-            Loading accounts...
-          </Text>
-        ) : accounts.length === 0 ? (
-          <Text size="sm" c="dimmed">
-            No accounts yet. Add them in Settings → Accounts.
-          </Text>
-        ) : (
-          accounts.map((account) => (
-            <Group key={account.id} justify="space-between" align="center">
-              <Group gap="xs">
-                <Text fw={600}>{account.name}</Text>
-                <Badge variant="light" color="blue">
-                  {account.type === "card" ? "Credit card" : account.type}
-                </Badge>
-              </Group>
-              <Text fw={600}>{maskValue(account.current_balance ?? 0, hidden)}</Text>
-            </Group>
-          ))
-        )}
+        {content}
       </Stack>
     </Paper>
   );

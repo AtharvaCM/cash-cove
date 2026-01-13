@@ -24,6 +24,7 @@ export const UpcomingSubscriptionsCard = ({
     () => upcoming.reduce((sum, sub) => sum + sub.amount, 0),
     [upcoming]
   );
+  const isEmpty = upcoming.length === 0;
 
   return (
     <Paper
@@ -50,7 +51,7 @@ export const UpcomingSubscriptionsCard = ({
         </Text>
         <Text fw={700}>{formatINR(total)}</Text>
       </Group>
-      {upcoming.length === 0 ? (
+      {isEmpty ? (
         <Text size="sm" c="dimmed">
           Nothing due soon. Add subscriptions to track renewals.
         </Text>
@@ -72,13 +73,13 @@ export const UpcomingSubscriptionsCard = ({
       <Button
         component={Link}
         to="/subscriptions"
-        variant="subtle"
-        color="gray"
+        variant={isEmpty ? "light" : "subtle"}
+        color={isEmpty ? "blue" : "gray"}
         size="xs"
         mt="md"
         rightSection={<ArrowUpRight size={14} />}
       >
-        View subscriptions
+        {isEmpty ? "Add subscriptions" : "View subscriptions"}
       </Button>
     </Paper>
   );

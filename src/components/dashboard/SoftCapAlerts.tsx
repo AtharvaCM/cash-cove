@@ -44,6 +44,13 @@ export const SoftCapAlerts = ({ warnings, hasBudgets, style }: SoftCapAlertsProp
           const atLimit = !over && Math.abs(warning.budget - warning.spent) < 0.01;
           const percent = Math.round(warning.ratio * 100);
           const delta = Math.max(0, warning.spent - warning.budget);
+          let statusLabel = `${percent}% used`;
+
+          if (over) {
+            statusLabel = `${formatINR(delta)} over`;
+          } else if (atLimit) {
+            statusLabel = "At limit";
+          }
 
           return (
             <Paper
@@ -63,11 +70,7 @@ export const SoftCapAlerts = ({ warnings, hasBudgets, style }: SoftCapAlertsProp
                   </Text>
                 </Stack>
                 <Text size="sm" fw={600} c={over ? "red.6" : "brand.6"}>
-                  {over
-                    ? `${formatINR(delta)} over`
-                    : atLimit
-                      ? "At limit"
-                      : `${percent}% used`}
+                  {statusLabel}
                 </Text>
               </Group>
             </Paper>

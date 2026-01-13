@@ -185,12 +185,19 @@ export const Subscriptions = () => {
           }
           const daysAway = dayjs(raw).diff(dayjs(), "day");
           const isOverdue = daysAway < 0;
-          const label = isOverdue
-            ? `Overdue by ${Math.abs(daysAway)}d`
-            : daysAway === 0
-              ? "Due today"
-              : `Due in ${daysAway}d`;
-          const tone = isOverdue ? "red" : daysAway <= 7 ? "orange" : "gray";
+          let label = `Due in ${daysAway}d`;
+          if (isOverdue) {
+            label = `Overdue by ${Math.abs(daysAway)}d`;
+          } else if (daysAway === 0) {
+            label = "Due today";
+          }
+
+          let tone = "gray";
+          if (isOverdue) {
+            tone = "red";
+          } else if (daysAway <= 7) {
+            tone = "orange";
+          }
           return (
             <Stack gap={4}>
               <Text fw={600}>{params.data?.next_due}</Text>
@@ -213,10 +220,15 @@ export const Subscriptions = () => {
         maxWidth: 160,
         cellRenderer: (params: ICellRendererParams<SubscriptionRow>) => {
           const status = params.data?.status ?? "active";
-          const color =
-            status === "active" ? "green" : status === "paused" ? "yellow" : "gray";
-          const label =
-            status === "active" ? "Active" : status === "paused" ? "Paused" : "Cancelled";
+          let color = "gray";
+          let label = "Cancelled";
+          if (status === "active") {
+            color = "green";
+            label = "Active";
+          } else if (status === "paused") {
+            color = "yellow";
+            label = "Paused";
+          }
           return (
             <Badge variant="light" color={color} radius="sm">
               {label}

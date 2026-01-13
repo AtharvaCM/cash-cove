@@ -55,11 +55,15 @@ export const AppLayout = () => {
     () => isMobile || !isCollapsed || isSidebarHovering,
     [isCollapsed, isSidebarHovering, isMobile]
   );
-  const sidebarWidth = useMemo(
-    () =>
-      isMobile ? "100%" : isCollapsed ? (isSidebarHovering ? 240 : 76) : 260,
-    [isCollapsed, isSidebarHovering, isMobile]
-  );
+  const sidebarWidth = useMemo(() => {
+    if (isMobile) {
+      return "100%";
+    }
+    if (isCollapsed) {
+      return isSidebarHovering ? 240 : 76;
+    }
+    return 260;
+  }, [isCollapsed, isSidebarHovering, isMobile]);
   const user = useAppSelector((state) => state.auth.user);
   const dispatch = useAppDispatch();
   const location = useLocation();

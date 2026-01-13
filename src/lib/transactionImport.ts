@@ -469,9 +469,15 @@ export const parseImportRows = ({
 
     const rawAmount = getCell(mapping.amount);
     const signedAmount = rawAmount ? parseAmountValue(rawAmount) : null;
-    let inferredType: "expense" | "income" | null =
-      signedAmount === null ? null : signedAmount < 0 ? "expense" : "income";
-    let amountValue = signedAmount === null ? null : Math.abs(signedAmount ?? 0);
+    let inferredType: "expense" | "income" | null = null;
+    if (signedAmount !== null) {
+      inferredType = signedAmount < 0 ? "expense" : "income";
+    }
+
+    let amountValue: number | null = null;
+    if (signedAmount !== null) {
+      amountValue = Math.abs(signedAmount);
+    }
 
     if (amountValue === null || amountValue === 0) {
       const debitValue = mapping.debit

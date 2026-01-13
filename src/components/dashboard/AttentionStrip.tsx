@@ -16,13 +16,21 @@ export type AttentionItem = {
 
 type AttentionStripProps = {
   items: AttentionItem[];
+  style?: React.CSSProperties;
 };
 
-export const AttentionStrip = ({ items }: AttentionStripProps) => {
+export const AttentionStrip = ({ items, style }: AttentionStripProps) => {
   const count = items.length;
 
   return (
-    <Paper withBorder shadow="sm" radius="lg" p="md" className="dashboard-attention-strip">
+    <Paper
+      withBorder
+      shadow="sm"
+      radius="lg"
+      p="md"
+      className="dashboard-attention-strip dashboard-section"
+      style={style}
+    >
       <Group justify="space-between" align="center" mb="sm" wrap="wrap">
         <Stack gap={2}>
           <Title order={4}>Attention</Title>

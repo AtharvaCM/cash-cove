@@ -11,7 +11,7 @@ import {
 } from "@mantine/core";
 import { CheckCircle2, Plus } from "lucide-react";
 import dayjs from "dayjs";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   useAddTransactionMutation,
   useGetAccountsQuery,
@@ -52,7 +52,22 @@ export const Subscriptions = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [postingId, setPostingId] = useState<string | null>(null);
   const [postErrors, setPostErrors] = useState<Record<string, string>>({});
-  const [needsAccountOnly, setNeedsAccountOnly] = useState(false);
+  const [needsAccountOnly, setNeedsAccountOnly] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    try {
+      const saved = window.localStorage.getItem(
+        "cashcove:subscriptions:needsAccountOnly"
+      );
+      if (saved === null) {
+        return false;
+      }
+      return saved === "true";
+    } catch {
+      return false;
+    }
+  });
   const [isBulkPosting, setIsBulkPosting] = useState(false);
   const [bulkSummary, setBulkSummary] = useState<{
     total: number;
@@ -364,6 +379,20 @@ export const Subscriptions = () => {
     setEditingId(null);
     setIsFormOpen(true);
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    try {
+      window.localStorage.setItem(
+        "cashcove:subscriptions:needsAccountOnly",
+        String(needsAccountOnly)
+      );
+    } catch {
+      // Ignore storage errors (e.g., storage disabled).
+    }
+  }, [needsAccountOnly]);
 
   const handleEditSubscription = (id: string) => {
     setEditingId(id);

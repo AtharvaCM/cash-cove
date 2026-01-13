@@ -1,5 +1,6 @@
 import { Group, Stack, Switch, Text } from "@mantine/core";
-import { useMemo, useState } from "react";
+import type { CSSProperties } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { Eye, EyeOff } from "lucide-react";
 import { ChartsSection } from "../components/dashboard/ChartsSection";
@@ -22,8 +23,38 @@ import { useGetAccountsQuery, useGetSubscriptionsQuery } from "../features/api/a
 import { getUpcomingSubscriptions, isSubscriptionOverdue } from "../lib/subscriptions";
 
 export const Dashboard = () => {
-  const [rollupCategories, setRollupCategories] = useState(true);
-  const [hideBalances, setHideBalances] = useState(true);
+  const [rollupCategories, setRollupCategories] = useState(() => {
+    if (typeof window === "undefined") {
+      return true;
+    }
+    try {
+      const saved = window.localStorage.getItem(
+        "cashcove:dashboard:rollupCategories"
+      );
+      if (saved === null) {
+        return true;
+      }
+      return saved === "true";
+    } catch {
+      return true;
+    }
+  });
+  const [hideBalances, setHideBalances] = useState(() => {
+    if (typeof window === "undefined") {
+      return true;
+    }
+    try {
+      const saved = window.localStorage.getItem(
+        "cashcove:dashboard:hideBalances"
+      );
+      if (saved === null) {
+        return true;
+      }
+      return saved === "true";
+    } catch {
+      return true;
+    }
+  });
   const { data: accounts = [], isLoading: isAccountsLoading } =
     useGetAccountsQuery();
   const { data: subscriptions = [] } = useGetSubscriptionsQuery();
@@ -129,6 +160,37 @@ export const Dashboard = () => {
     transactionsCount: transactions.length,
     accountsCount: accounts.length,
   });
+  const sectionStyle = (delayMs: number): CSSProperties => ({
+    "--dash-delay": `${delayMs}ms`,
+  } as CSSProperties);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    try {
+      window.localStorage.setItem(
+        "cashcove:dashboard:rollupCategories",
+        String(rollupCategories)
+      );
+    } catch {
+      // Ignore storage errors (e.g., storage disabled).
+    }
+  }, [rollupCategories]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    try {
+      window.localStorage.setItem(
+        "cashcove:dashboard:hideBalances",
+        String(hideBalances)
+      );
+    } catch {
+      // Ignore storage errors (e.g., storage disabled).
+    }
+  }, [hideBalances]);
   return (
     <Stack gap="lg">
       <OverviewCards
@@ -143,21 +205,28 @@ export const Dashboard = () => {
         hasPreviousMonthData={hasPreviousMonthData}
       />
 
-      <Group align="stretch" grow wrap="wrap" gap="md">
+      <Group
+        align="stretch"
+        grow
+        wrap="wrap"
+        gap="md"
+        className="dashboard-section"
+        style={sectionStyle(40)}
+      >
         {showSetupChecklist ? (
           <SetupChecklistCard
             items={setupItems}
-            style={{ flex: "1 1 320px" }}
+            style={{ ...sectionStyle(80), flex: "1 1 320px" }}
           />
         ) : null}
         <WeeklyCheckInCard
           insights={weeklyInsights}
           nudge={weeklyNudge}
-          style={{ flex: "1 1 320px" }}
+          style={{ ...sectionStyle(120), flex: "1 1 320px" }}
         />
       </Group>
 
-      <AttentionStrip items={attentionItems} />
+      <AttentionStrip items={attentionItems} style={sectionStyle(160)} />
 
       <Group align="stretch" grow wrap="wrap" gap="md">
         <AccountBalances

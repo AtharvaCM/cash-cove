@@ -48,6 +48,102 @@ type SubscriptionRow = {
   hasAccount: boolean;
 };
 
+type SubscriptionActionParams = {
+  onPostPayment: (id: string) => void;
+  postingId: string | null;
+  isBulkPosting: boolean;
+  postErrors: Record<string, string>;
+};
+
+const SubscriptionNextDueCell = (
+  params: ICellRendererParams<SubscriptionRow>
+) => {
+  const raw = params.data?.next_due_raw;
+  if (!raw) {
+    return <Text size="sm">-</Text>;
+  }
+  const daysAway = dayjs(raw).diff(dayjs(), "day");
+  const isOverdue = daysAway < 0;
+  let label = `Due in ${daysAway}d`;
+  if (isOverdue) {
+    label = `Overdue by ${Math.abs(daysAway)}d`;
+  } else if (daysAway === 0) {
+    label = "Due today";
+  }
+
+  let tone = "gray";
+  if (isOverdue) {
+    tone = "red";
+  } else if (daysAway <= 7) {
+    tone = "orange";
+  }
+  return (
+    <Stack gap={4}>
+      <Text fw={600}>{params.data?.next_due}</Text>
+      <Badge variant="light" color={tone} radius="sm">
+        {label}
+      </Badge>
+    </Stack>
+  );
+};
+
+const SubscriptionStatusCell = (
+  params: ICellRendererParams<SubscriptionRow>
+) => {
+  const status = params.data?.status ?? "active";
+  let color = "gray";
+  let label = "Cancelled";
+  if (status === "active") {
+    color = "green";
+    label = "Active";
+  } else if (status === "paused") {
+    color = "yellow";
+    label = "Paused";
+  }
+  return (
+    <Badge variant="light" color={color} radius="sm">
+      {label}
+    </Badge>
+  );
+};
+
+const SubscriptionActionsCell = (
+  params: ICellRendererParams<SubscriptionRow> & SubscriptionActionParams
+) => {
+  const row = params.data;
+  if (!row) {
+    return null;
+  }
+  const disabled =
+    row.status !== "active" ||
+    !row.hasAccount ||
+    Boolean(params.postingId) ||
+    params.isBulkPosting;
+  const rowError = params.postErrors[row.id];
+  return (
+    <Stack gap={4}>
+      <Button
+        size="xs"
+        variant="light"
+        leftSection={<CheckCircle2 size={14} strokeWidth={2} />}
+        disabled={disabled}
+        loading={params.postingId === row.id}
+        onClick={(event) => {
+          event.stopPropagation();
+          params.onPostPayment(row.id);
+        }}
+      >
+        Post payment
+      </Button>
+      {rowError ? (
+        <Text size="xs" c="red.6">
+          {rowError}
+        </Text>
+      ) : null}
+    </Stack>
+  );
+};
+
 export const Subscriptions = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -286,35 +382,7 @@ export const Subscriptions = () => {
         headerName: "Next due",
         field: "next_due",
         flex: 1,
-        cellRenderer: (params: ICellRendererParams<SubscriptionRow>) => {
-          const raw = params.data?.next_due_raw;
-          if (!raw) {
-            return <Text size="sm">-</Text>;
-          }
-          const daysAway = dayjs(raw).diff(dayjs(), "day");
-          const isOverdue = daysAway < 0;
-          let label = `Due in ${daysAway}d`;
-          if (isOverdue) {
-            label = `Overdue by ${Math.abs(daysAway)}d`;
-          } else if (daysAway === 0) {
-            label = "Due today";
-          }
-
-          let tone = "gray";
-          if (isOverdue) {
-            tone = "red";
-          } else if (daysAway <= 7) {
-            tone = "orange";
-          }
-          return (
-            <Stack gap={4}>
-              <Text fw={600}>{params.data?.next_due}</Text>
-              <Badge variant="light" color={tone} radius="sm">
-                {label}
-              </Badge>
-            </Stack>
-          );
-        },
+        cellRenderer: SubscriptionNextDueCell,
       },
       {
         headerName: "Amount",
@@ -326,23 +394,7 @@ export const Subscriptions = () => {
         headerName: "Status",
         field: "status",
         maxWidth: 160,
-        cellRenderer: (params: ICellRendererParams<SubscriptionRow>) => {
-          const status = params.data?.status ?? "active";
-          let color = "gray";
-          let label = "Cancelled";
-          if (status === "active") {
-            color = "green";
-            label = "Active";
-          } else if (status === "paused") {
-            color = "yellow";
-            label = "Paused";
-          }
-          return (
-            <Badge variant="light" color={color} radius="sm">
-              {label}
-            </Badge>
-          );
-        },
+        cellRenderer: SubscriptionStatusCell,
       },
       { headerName: "Account", field: "account", flex: 1 },
       { headerName: "Category", field: "category", flex: 1 },
@@ -352,39 +404,12 @@ export const Subscriptions = () => {
         field: "id",
         maxWidth: 160,
         sortable: false,
-        cellRenderer: (params: ICellRendererParams<SubscriptionRow>) => {
-          const row = params.data;
-          if (!row) {
-            return null;
-          }
-          const disabled =
-            row.status !== "active" ||
-            !row.hasAccount ||
-            Boolean(postingId) ||
-            isBulkPosting;
-          const rowError = postErrors[row.id];
-          return (
-            <Stack gap={4}>
-              <Button
-                size="xs"
-                variant="light"
-                leftSection={<CheckCircle2 size={14} strokeWidth={2} />}
-                disabled={disabled}
-                loading={postingId === row.id}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  handlePostPayment(row.id);
-                }}
-              >
-                Post payment
-              </Button>
-              {rowError ? (
-                <Text size="xs" c="red.6">
-                  {rowError}
-                </Text>
-              ) : null}
-            </Stack>
-          );
+        cellRenderer: SubscriptionActionsCell,
+        cellRendererParams: {
+          onPostPayment: handlePostPayment,
+          postingId,
+          isBulkPosting,
+          postErrors,
         },
       },
     ],

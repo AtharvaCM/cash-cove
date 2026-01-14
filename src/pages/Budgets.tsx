@@ -26,6 +26,48 @@ type BudgetRow = {
   status: "over" | "near" | "ok" | "none";
 };
 
+const BudgetSpendCell = (params: ICellRendererParams<BudgetRow>) => {
+  const spend = Number(params.value ?? 0);
+  const amount = params.data?.amount ?? 0;
+  const status = params.data?.status ?? "ok";
+  let color = "#2f9e44";
+  let label = "Within budget";
+
+  if (amount === 0 && spend > 0) {
+    color = "#e03131";
+    label = "No budget";
+  } else if (status === "over") {
+    color = "#e03131";
+    label = "Over budget";
+  } else if (status === "near") {
+    color = "#f08c00";
+    label = "Near limit";
+  }
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+      }}
+      title={label}
+    >
+      <span
+        style={{
+          display: "inline-flex",
+          width: 10,
+          height: 10,
+          borderRadius: "999px",
+          background: color,
+          flexShrink: 0,
+        }}
+      />
+      <span>{formatINR(spend)}</span>
+    </div>
+  );
+};
+
 export const Budgets = () => {
   const [month, setMonth] = useState(dayjs().format("YYYY-MM"));
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -122,45 +164,7 @@ export const Budgets = () => {
         headerName: "Spent",
         field: "spend",
         maxWidth: 200,
-        cellRenderer: (params: ICellRendererParams<BudgetRow>) => {
-          const spend = Number(params.value ?? 0);
-          const amount = params.data?.amount ?? 0;
-          const status = params.data?.status ?? "ok";
-          let color = "#2f9e44";
-          let label = "Within budget";
-          if (amount === 0 && spend > 0) {
-            color = "#e03131";
-            label = "No budget";
-          } else if (status === "over") {
-            color = "#e03131";
-            label = "Over budget";
-          } else if (status === "near") {
-            color = "#f08c00";
-            label = "Near limit";
-          }
-          return (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-              }}
-              title={label}
-            >
-              <span
-                style={{
-                  display: "inline-flex",
-                  width: 10,
-                  height: 10,
-                  borderRadius: "999px",
-                  background: color,
-                  flexShrink: 0,
-                }}
-              />
-              <span>{formatINR(spend)}</span>
-            </div>
-          );
-        },
+        cellRenderer: BudgetSpendCell,
       },
     ],
     []

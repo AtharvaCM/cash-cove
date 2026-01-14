@@ -1,15 +1,20 @@
 import {
+  ActionIcon,
   Badge,
   Button,
   Group,
+  Modal,
   Paper,
+  Select,
   SimpleGrid,
   Stack,
   Switch,
   Text,
+  TextInput,
   Title,
 } from "@mantine/core";
-import { CheckCircle2, Plus } from "lucide-react";
+import { DateInput } from "@mantine/dates";
+import { CheckCircle2, Plus, Save, Trash2 } from "lucide-react";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -32,6 +37,9 @@ import {
 } from "../lib/subscriptions";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import type { Subscription } from "../types/finance";
+import { ActiveFilterChips, type ActiveFilterChip } from "../components/filters/ActiveFilterChips";
+import { loadSavedFilters, saveSavedFilters, type SavedFilter } from "../lib/savedFilters";
+import { useAppSelector } from "../app/hooks";
 
 type SubscriptionRow = {
   id: string;
@@ -54,6 +62,19 @@ type SubscriptionActionParams = {
   isBulkPosting: boolean;
   postErrors: Record<string, string>;
 };
+
+type SubscriptionFilters = {
+  search: string;
+  status: string;
+  accountId: string;
+  dueFrom: string;
+  dueTo: string;
+  minAmount: string;
+  maxAmount: string;
+};
+
+const buildFiltersKey = (userId?: string | null) =>
+  `cashcove:filters:subscriptions:${userId ?? "anon"}`;
 
 const SubscriptionNextDueCell = (
   params: ICellRendererParams<SubscriptionRow>
@@ -145,6 +166,7 @@ const SubscriptionActionsCell = (
 };
 
 export const Subscriptions = () => {
+  const userId = useAppSelector((state) => state.auth.user?.id ?? null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [postingId, setPostingId] = useState<string | null>(null);
@@ -174,6 +196,19 @@ export const Subscriptions = () => {
     success: number;
     failed: number;
   } | null>(null);
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterAccount, setFilterAccount] = useState("");
+  const [filterFrom, setFilterFrom] = useState("");
+  const [filterTo, setFilterTo] = useState("");
+  const [minAmount, setMinAmount] = useState("");
+  const [maxAmount, setMaxAmount] = useState("");
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const [selectedSavedId, setSelectedSavedId] = useState<string | null>(null);
+  const [savedFilters, setSavedFilters] = useState<
+    SavedFilter<SubscriptionFilters>[]
+  >(() => loadSavedFilters(buildFiltersKey(userId)));
 
   const { data: subscriptions = [], isLoading } = useGetSubscriptionsQuery();
   const { data: categories = [] } = useGetCategoriesQuery();
@@ -236,9 +271,64 @@ export const Subscriptions = () => {
     [dueThisWeek]
   );
 
+  const filteredSubscriptions = useMemo(() => {
+    const searchTerm = search.trim().toLowerCase();
+    return subscriptions.filter((sub) => {
+      if (needsAccountOnly && sub.account_id) {
+        return false;
+      }
+      if (filterStatus && sub.status !== filterStatus) {
+        return false;
+      }
+      if (filterAccount && sub.account_id !== filterAccount) {
+        return false;
+      }
+      if (filterFrom && sub.next_due < filterFrom) {
+        return false;
+      }
+      if (filterTo && sub.next_due > filterTo) {
+        return false;
+      }
+      if (minAmount && sub.amount < Number(minAmount)) {
+        return false;
+      }
+      if (maxAmount && sub.amount > Number(maxAmount)) {
+        return false;
+      }
+      if (!searchTerm) {
+        return true;
+      }
+      const categoryLabel = sub.category_id
+        ? categoryMap.get(sub.category_id) ?? ""
+        : "";
+      const accountLabel = sub.account_id
+        ? accountMap.get(sub.account_id) ?? ""
+        : "";
+      const paymentLabel = sub.payment_method_id
+        ? paymentMap.get(sub.payment_method_id) ?? ""
+        : "";
+      const notesLabel = sub.notes ?? "";
+      const haystack = `${sub.name} ${categoryLabel} ${accountLabel} ${paymentLabel} ${notesLabel}`.toLowerCase();
+      return haystack.includes(searchTerm);
+    });
+  }, [
+    subscriptions,
+    needsAccountOnly,
+    filterStatus,
+    filterAccount,
+    filterFrom,
+    filterTo,
+    minAmount,
+    maxAmount,
+    search,
+    categoryMap,
+    accountMap,
+    paymentMap,
+  ]);
+
   const rows = useMemo<SubscriptionRow[]>(
     () =>
-      subscriptions.map((sub) => ({
+      filteredSubscriptions.map((sub) => ({
         id: sub.id,
         name: sub.name,
         cadence: formatIntervalLabel(sub.interval_months),
@@ -254,11 +344,7 @@ export const Subscriptions = () => {
         overdue: isSubscriptionOverdue(sub),
         hasAccount: Boolean(sub.account_id),
       })),
-    [subscriptions, accountMap, categoryMap, paymentMap]
-  );
-  const filteredRows = useMemo(
-    () => (needsAccountOnly ? rows.filter((row) => !row.hasAccount) : rows),
-    [rows, needsAccountOnly]
+    [filteredSubscriptions, accountMap, categoryMap, paymentMap]
   );
 
   const clearActionParam = () => {
@@ -452,12 +538,16 @@ export const Subscriptions = () => {
     dueThisWeekEligible.length > 0
       ? `Post all due this week (${dueThisWeekEligible.length})`
       : "Post all due this week";
-  const countLabel = needsAccountOnly
-    ? `${filteredRows.length} of ${subscriptions.length} need an account`
-    : `${subscriptions.length} items`;
-  const emptyLabel = needsAccountOnly
-    ? "All subscriptions have accounts."
-    : "No subscriptions yet. Add one to get started.";
+  const totalCount = subscriptions.length;
+  const filteredCount = filteredSubscriptions.length;
+  const countLabel =
+    totalCount === filteredCount
+      ? `${totalCount} items`
+      : `${filteredCount} of ${totalCount} items`;
+  const emptyLabel =
+    totalCount === 0
+      ? "No subscriptions yet. Add one to get started."
+      : "No subscriptions match these filters.";
   const bulkSummaryLabel = bulkSummary
     ? bulkSummary.failed === 0
       ? `Posted ${bulkSummary.success} payment${
@@ -468,8 +558,167 @@ export const Subscriptions = () => {
   const bulkSummaryColor =
     bulkSummary && bulkSummary.failed === 0 ? "teal.7" : "orange.6";
 
+  const savedFilterOptions = useMemo(
+    () =>
+      savedFilters.map((filter) => ({ value: filter.id, label: filter.name })),
+    [savedFilters]
+  );
+
+  const activeChips = useMemo<ActiveFilterChip[]>(() => {
+    const chips: ActiveFilterChip[] = [];
+    if (search.trim()) {
+      chips.push({
+        key: "search",
+        label: `Search: ${search.trim()}`,
+        onClear: () => setSearch(""),
+      });
+    }
+    if (filterStatus) {
+      chips.push({
+        key: "status",
+        label: `Status: ${filterStatus}`,
+        onClear: () => setFilterStatus(""),
+      });
+    }
+    if (filterAccount) {
+      chips.push({
+        key: "account",
+        label: `Account: ${accountMap.get(filterAccount) ?? "Unknown"}`,
+        onClear: () => setFilterAccount(""),
+      });
+    }
+    if (filterFrom || filterTo) {
+      const fromLabel = filterFrom
+        ? dayjs(filterFrom).format("DD MMM")
+        : "Any";
+      const toLabel = filterTo ? dayjs(filterTo).format("DD MMM") : "Any";
+      chips.push({
+        key: "due",
+        label: `Due: ${fromLabel} → ${toLabel}`,
+        onClear: () => {
+          setFilterFrom("");
+          setFilterTo("");
+        },
+      });
+    }
+    if (minAmount || maxAmount) {
+      const minLabel = minAmount ? formatINR(Number(minAmount)) : "Any";
+      const maxLabel = maxAmount ? formatINR(Number(maxAmount)) : "Any";
+      chips.push({
+        key: "amount",
+        label: `Amount: ${minLabel} – ${maxLabel}`,
+        onClear: () => {
+          setMinAmount("");
+          setMaxAmount("");
+        },
+      });
+    }
+    if (needsAccountOnly) {
+      chips.push({
+        key: "needs-account",
+        label: "Needs account",
+        onClear: () => setNeedsAccountOnly(false),
+      });
+    }
+    return chips;
+  }, [
+    search,
+    filterStatus,
+    filterAccount,
+    filterFrom,
+    filterTo,
+    minAmount,
+    maxAmount,
+    needsAccountOnly,
+    accountMap,
+  ]);
+
+  const persistSavedFilters = (next: SavedFilter<SubscriptionFilters>[]) => {
+    setSavedFilters(next);
+    saveSavedFilters(buildFiltersKey(userId), next);
+  };
+
+  const handleApplySavedFilter = (id: string | null) => {
+    setSelectedSavedId(id);
+    if (!id) {
+      return;
+    }
+    const match = savedFilters.find((filter) => filter.id === id);
+    if (!match) {
+      return;
+    }
+    setSearch(match.value.search);
+    setFilterStatus(match.value.status);
+    setFilterAccount(match.value.accountId);
+    setFilterFrom(match.value.dueFrom);
+    setFilterTo(match.value.dueTo);
+    setMinAmount(match.value.minAmount);
+    setMaxAmount(match.value.maxAmount);
+  };
+
+  const handleSaveCurrentFilters = () => {
+    const trimmed = saveName.trim();
+    if (!trimmed) {
+      return;
+    }
+    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const value: SubscriptionFilters = {
+      search,
+      status: filterStatus,
+      accountId: filterAccount,
+      dueFrom: filterFrom,
+      dueTo: filterTo,
+      minAmount,
+      maxAmount,
+    };
+    persistSavedFilters([...savedFilters, { id, name: trimmed, value }]);
+    setSelectedSavedId(id);
+    setSaveName("");
+    setSaveModalOpen(false);
+  };
+
+  const handleDeleteSavedFilter = () => {
+    if (!selectedSavedId) {
+      return;
+    }
+    const next = savedFilters.filter((filter) => filter.id !== selectedSavedId);
+    persistSavedFilters(next);
+    setSelectedSavedId(null);
+  };
+
   return (
     <Stack gap="lg">
+      <Modal
+        opened={saveModalOpen}
+        onClose={() => setSaveModalOpen(false)}
+        title="Save filters"
+        size="sm"
+      >
+        <Stack gap="sm">
+          <TextInput
+            label="Filter name"
+            value={saveName}
+            onChange={(event) => setSaveName(event.target.value)}
+            placeholder="e.g., Due this week, Streaming only"
+            required
+          />
+          <Group justify="flex-end">
+            <Button
+              variant="subtle"
+              color="gray"
+              onClick={() => setSaveModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              leftSection={<Save size={16} strokeWidth={2} />}
+              onClick={handleSaveCurrentFilters}
+            >
+              Save
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
       <SubscriptionFormModal
         key={formKey}
         opened={formVisible}
@@ -554,8 +803,104 @@ export const Subscriptions = () => {
             </Button>
           </Group>
         </Group>
+        <Stack gap="sm" mb="md">
+          <Group gap="sm" align="flex-end" wrap="wrap">
+            <TextInput
+              label="Search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Name, category, account"
+            />
+            <Select
+              label="Status"
+              data={[
+                { value: "active", label: "Active" },
+                { value: "paused", label: "Paused" },
+                { value: "cancelled", label: "Cancelled" },
+              ]}
+              value={filterStatus || null}
+              onChange={(value) => setFilterStatus(value ?? "")}
+              clearable
+            />
+            <Select
+              label="Account"
+              data={accounts.map((account) => ({
+                value: account.id,
+                label: account.name,
+              }))}
+              value={filterAccount || null}
+              onChange={(value) => setFilterAccount(value ?? "")}
+              clearable
+              searchable
+            />
+            <DateInput
+              label="Due from"
+              value={filterFrom ? dayjs(filterFrom).toDate() : null}
+              onChange={(value) =>
+                setFilterFrom(value ? dayjs(value).format("YYYY-MM-DD") : "")
+              }
+              clearable
+            />
+            <DateInput
+              label="Due to"
+              value={filterTo ? dayjs(filterTo).toDate() : null}
+              onChange={(value) =>
+                setFilterTo(value ? dayjs(value).format("YYYY-MM-DD") : "")
+              }
+              clearable
+            />
+            <TextInput
+              label="Min amount"
+              type="number"
+              value={minAmount}
+              onChange={(event) => setMinAmount(event.target.value)}
+              placeholder="0"
+              min="0"
+              step="0.01"
+            />
+            <TextInput
+              label="Max amount"
+              type="number"
+              value={maxAmount}
+              onChange={(event) => setMaxAmount(event.target.value)}
+              placeholder="0"
+              min="0"
+              step="0.01"
+            />
+            <Select
+              label="Saved"
+              data={savedFilterOptions}
+              value={selectedSavedId}
+              onChange={handleApplySavedFilter}
+              placeholder="Choose"
+              clearable
+            />
+            <Group gap="xs">
+              <ActionIcon
+                variant="light"
+                color="blue"
+                size="lg"
+                onClick={() => setSaveModalOpen(true)}
+                aria-label="Save current filters"
+              >
+                <Save size={16} strokeWidth={2} />
+              </ActionIcon>
+              <ActionIcon
+                variant="light"
+                color="red"
+                size="lg"
+                onClick={handleDeleteSavedFilter}
+                disabled={!selectedSavedId}
+                aria-label="Delete saved filter"
+              >
+                <Trash2 size={16} strokeWidth={2} />
+              </ActionIcon>
+            </Group>
+          </Group>
+          <ActiveFilterChips items={activeChips} />
+        </Stack>
         <DatatrixTable
-          rows={filteredRows}
+          rows={rows}
           columns={columns}
           height="max(420px, calc(100vh - 320px))"
           emptyLabel={emptyLabel}

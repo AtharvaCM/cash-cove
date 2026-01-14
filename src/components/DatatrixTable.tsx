@@ -1,6 +1,10 @@
 import { useMemo } from "react";
 import { AgGridReact } from "ag-grid-react";
-import type { ColDef, GridOptions } from "ag-grid-community";
+import type {
+  ColDef,
+  GridOptions,
+  CellValueChangedEvent,
+} from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
 import "../styles/datatrix.css";
@@ -13,6 +17,8 @@ export type DatatrixTableProps<T> = {
   emptyLabel?: string;
   getRowId?: (data: T) => string;
   onRowClick?: (row: T) => void;
+  onRowDoubleClick?: (row: T) => void;
+  onCellValueChanged?: (event: CellValueChangedEvent<T>) => void;
 };
 
 export const DatatrixTable = <T,>({
@@ -23,6 +29,8 @@ export const DatatrixTable = <T,>({
   emptyLabel = "No data available",
   getRowId,
   onRowClick,
+  onRowDoubleClick,
+  onCellValueChanged,
 }: DatatrixTableProps<T>) => {
   const defaultColDef = useMemo<ColDef<T>>(
     () => ({
@@ -42,9 +50,10 @@ export const DatatrixTable = <T,>({
       headerHeight: 42,
       suppressCellFocus: false,
       overlayNoRowsTemplate: `<span class="muted">${emptyLabel}</span>`,
-      rowClass: onRowClick ? "datatrix-row-clickable" : undefined,
+      rowClass:
+        onRowClick || onRowDoubleClick ? "datatrix-row-clickable" : undefined,
     }),
-    [emptyLabel, onRowClick]
+    [emptyLabel, onRowClick, onRowDoubleClick]
   );
 
   const tableClassName = `ag-theme-alpine datatrix-table${
@@ -75,6 +84,16 @@ export const DatatrixTable = <T,>({
                 }
               : undefined
           }
+          onRowDoubleClicked={
+            onRowDoubleClick
+              ? (event) => {
+                  if (event.data) {
+                    onRowDoubleClick(event.data);
+                  }
+                }
+              : undefined
+          }
+          onCellValueChanged={onCellValueChanged}
         />
       </div>
     </div>

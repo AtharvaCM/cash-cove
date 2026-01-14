@@ -21,8 +21,14 @@ import {
   useGetRulesQuery,
   useUpdateTransactionMutation,
 } from "../../features/api/apiSlice";
+import { useAppSelector } from "../../app/hooks";
 import { formatINR } from "../../lib/format";
 import { applyRulesToTransaction } from "../../lib/rules";
+import {
+  loadTransactionDefaults,
+  saveTransactionDefaults,
+  type TransactionDefaults,
+} from "../../lib/preferences";
 import type {
   Account,
   Category,
@@ -39,13 +45,17 @@ type TransactionFormModalProps = {
   accounts: Account[];
 };
 
-const buildInitialForm = (transaction?: Transaction | null) => ({
+const buildInitialForm = (
+  transaction?: Transaction | null,
+  defaults?: TransactionDefaults | null
+) => ({
   type: transaction?.type ?? "expense",
   date: transaction?.date ?? dayjs().format("YYYY-MM-DD"),
   amount: transaction ? String(transaction.amount) : "",
-  category_id: transaction?.category_id ?? "",
-  payment_method_id: transaction?.payment_method_id ?? "",
-  account_id: transaction?.account_id ?? "",
+  category_id: transaction?.category_id ?? defaults?.category_id ?? "",
+  payment_method_id:
+    transaction?.payment_method_id ?? defaults?.payment_method_id ?? "",
+  account_id: transaction?.account_id ?? defaults?.account_id ?? "",
   notes: transaction?.notes ?? "",
   tags: transaction?.tags?.length
     ? transaction.tags.map((tag) => tag.name).join(", ")
@@ -63,7 +73,12 @@ export const TransactionFormModal = ({
   accounts,
 }: TransactionFormModalProps) => {
   const mode = transaction ? "edit" : "create";
-  const [form, setForm] = useState(() => buildInitialForm(transaction));
+  const userId = useAppSelector((state) => state.auth.user?.id ?? null);
+  const defaults = useMemo(
+    () => (transaction ? null : loadTransactionDefaults(userId)),
+    [transaction, userId]
+  );
+  const [form, setForm] = useState(() => buildInitialForm(transaction, defaults));
   const [error, setError] = useState<string | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -190,6 +205,11 @@ export const TransactionFormModal = ({
         await addTransaction(payload).unwrap();
       }
 
+      saveTransactionDefaults(userId, {
+        account_id: effectiveAccountId || "",
+        payment_method_id: effectivePaymentMethodId || "",
+        category_id: ruled.category_id ?? "",
+      });
       onClose();
     } catch {
       setError(

@@ -33,10 +33,10 @@ export const AttentionStrip = ({ items, style }: AttentionStripProps) => {
     >
       <Group justify="space-between" align="center" mb="sm" wrap="wrap">
         <Stack gap={2}>
-          <Title order={4}>Attention</Title>
+          <Title order={4}>Actionable alerts</Title>
           <Text size="sm" c="dimmed">
             {count > 0
-              ? "Actionable items to keep your plan on track."
+              ? "Resolve the top items to keep your plan on track."
               : "All clear. No immediate actions right now."}
           </Text>
         </Stack>

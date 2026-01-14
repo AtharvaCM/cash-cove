@@ -27,6 +27,7 @@ import {
   LogOutIcon,
   ChevronsRight,
   ChevronsLeft,
+  Plus,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -38,6 +39,7 @@ import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { apiSlice } from "../features/api/apiSlice";
 import { clearAuth } from "../features/auth/authSlice";
 import { supabase } from "../lib/supabaseClient";
+import { QuickAddDrawer } from "./quickAdd/QuickAddDrawer";
 
 export const AppLayout = () => {
   const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -51,6 +53,7 @@ export const AppLayout = () => {
     }
   });
   const [isSidebarHovering, setIsSidebarHovering] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const isMobile = useMediaQuery("(max-width: 900px)");
   const isNavExpanded = useMemo(
     () => isMobile || !isCollapsed || isSidebarHovering,
@@ -108,6 +111,24 @@ export const AppLayout = () => {
     }
   }, [isCollapsed]);
 
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      const isModifier = event.metaKey || event.ctrlKey;
+      if (!isModifier || event.key.toLowerCase() !== "k") {
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      const tagName = target?.tagName?.toLowerCase();
+      if (tagName === "input" || tagName === "textarea" || tagName === "select") {
+        return;
+      }
+      event.preventDefault();
+      setQuickAddOpen(true);
+    };
+    globalThis.addEventListener("keydown", handler);
+    return () => globalThis.removeEventListener("keydown", handler);
+  }, []);
+
   const navItems = [
     { to: "/", label: "Overview", icon: <LayoutGrid size={18} /> },
     { to: "/cashflow", label: "Cashflow", icon: <TrendingUp size={18} /> },
@@ -129,6 +150,10 @@ export const AppLayout = () => {
       style={shellStyle}
       aria-label="CashCove layout shell"
     >
+      <QuickAddDrawer
+        opened={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+      />
       <aside
         className="sidebar"
         onMouseEnter={() =>
@@ -302,6 +327,15 @@ export const AppLayout = () => {
               </Group>
             </Stack>
             <Group gap="xs" className="topbar-actions">
+              <Button
+                variant="light"
+                color="blue"
+                size="compact-sm"
+                onClick={() => setQuickAddOpen(true)}
+                leftSection={<Plus size={16} strokeWidth={2} />}
+              >
+                Quick add
+              </Button>
               <Button
                 variant="light"
                 color="gray"

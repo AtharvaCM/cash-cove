@@ -25,7 +25,11 @@ import { useWeeklyCheckIn } from "../hooks/useWeeklyCheckIn";
 import { useSetupChecklist } from "../hooks/useSetupChecklist";
 import { useAttentionItems } from "../hooks/useAttentionItems";
 import { useDashboardPins } from "../hooks/useDashboardPins";
-import { useGetAccountsQuery, useGetSubscriptionsQuery } from "../features/api/apiSlice";
+import {
+  useGetAccountsQuery,
+  useGetReconciliationsQuery,
+  useGetSubscriptionsQuery,
+} from "../features/api/apiSlice";
 import { getUpcomingSubscriptions, isSubscriptionOverdue } from "../lib/subscriptions";
 
 const PIN_OPTIONS: DashboardPinOption[] = [
@@ -124,6 +128,7 @@ export const Dashboard = () => {
   const { data: accounts = [], isLoading: isAccountsLoading } =
     useGetAccountsQuery();
   const { data: subscriptions = [] } = useGetSubscriptionsQuery();
+  const { data: reconciliations = [] } = useGetReconciliationsQuery({});
   const {
     monthLabel,
     categories,
@@ -196,6 +201,30 @@ export const Dashboard = () => {
       ).length,
     [subscriptions]
   );
+
+  const reconciliationMismatchCount = useMemo(() => {
+    if (reconciliations.length === 0 || accounts.length === 0) {
+      return 0;
+    }
+    const latestByAccount = new Map<string, { statement_balance: number; statement_date: string }>();
+    reconciliations.forEach((item) => {
+      const existing = latestByAccount.get(item.account_id);
+      if (!existing || dayjs(item.statement_date).isAfter(existing.statement_date, "day")) {
+        latestByAccount.set(item.account_id, {
+          statement_balance: item.statement_balance,
+          statement_date: item.statement_date,
+        });
+      }
+    });
+    return accounts.filter((account) => {
+      const latest = latestByAccount.get(account.id);
+      if (!latest) {
+        return false;
+      }
+      const delta = Number(latest.statement_balance) - Number(account.current_balance ?? 0);
+      return Math.abs(delta) >= 0.01;
+    }).length;
+  }, [accounts, reconciliations]);
   const { insights: weeklyInsights, nudge: weeklyNudge } = useWeeklyCheckIn({
     transactionsCount: transactions.length,
     totalBudget,
@@ -225,6 +254,7 @@ export const Dashboard = () => {
     isLoading,
     transactionsCount: transactions.length,
     accountsCount: accounts.length,
+    reconciliationMismatchCount,
   });
   const showSetupChecklistCard =
     showSetupChecklist && isPinned("setup-checklist");

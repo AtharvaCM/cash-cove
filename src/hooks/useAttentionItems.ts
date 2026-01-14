@@ -11,6 +11,7 @@ type UseAttentionItemsArgs = {
   isLoading: boolean;
   transactionsCount: number;
   accountsCount: number;
+  reconciliationMismatchCount: number;
 };
 
 export const useAttentionItems = ({
@@ -22,6 +23,7 @@ export const useAttentionItems = ({
   isLoading,
   transactionsCount,
   accountsCount,
+  reconciliationMismatchCount,
 }: UseAttentionItemsArgs) =>
   useMemo<AttentionItem[]>(() => {
     const items: AttentionItem[] = [];
@@ -86,6 +88,21 @@ export const useAttentionItems = ({
       });
     }
 
+    if (reconciliationMismatchCount > 0) {
+      items.push({
+        id: "reconciliation-mismatch",
+        title: "Reconciliation mismatch",
+        description: `${reconciliationMismatchCount} account${
+          reconciliationMismatchCount === 1 ? "" : "s"
+        } differ from last statement.`,
+        badge: `${reconciliationMismatchCount} mismatch${
+          reconciliationMismatchCount === 1 ? "" : "es"
+        }`,
+        tone: "orange",
+        action: { label: "Reconcile accounts", to: "/settings" },
+      });
+    }
+
     if (accountsCount === 0) {
       items.push({
         id: "no-accounts",
@@ -104,6 +121,7 @@ export const useAttentionItems = ({
     hasBudgets,
     isLoading,
     overdueCount,
+    reconciliationMismatchCount,
     subscriptionsCount,
     transactionsCount,
     warnings.length,

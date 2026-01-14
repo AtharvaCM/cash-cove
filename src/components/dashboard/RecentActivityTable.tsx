@@ -1,4 +1,4 @@
-import { Paper, Stack, Text, Title } from "@mantine/core";
+import { Badge, Paper, Stack, Text, Title } from "@mantine/core";
 import { useMemo } from "react";
 import dayjs from "dayjs";
 import type { ColDef } from "ag-grid-community";
@@ -19,6 +19,24 @@ type RecentRow = {
   notes: string;
   amount: number;
   type: "expense" | "income";
+  isTransfer: boolean;
+};
+
+const RecentTypeCell = (params: { data?: RecentRow }) => {
+  const isTransfer = params.data?.isTransfer;
+  const type = params.data?.type ?? "expense";
+  if (isTransfer) {
+    return (
+      <Badge variant="light" color="gray" radius="sm">
+        Transfer
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="light" color={type === "income" ? "teal" : "red"} radius="sm">
+      {type === "income" ? "Income" : "Expense"}
+    </Badge>
+  );
 };
 
 export const RecentActivityTable = ({
@@ -35,6 +53,7 @@ export const RecentActivityTable = ({
         notes: tx.notes ?? "-",
         amount: tx.amount,
         type: tx.type,
+        isTransfer: Boolean(tx.is_transfer),
       })),
     [transactions, categoryMap]
   );
@@ -43,6 +62,12 @@ export const RecentActivityTable = ({
     () => [
       { headerName: "Date", field: "date", maxWidth: 120 },
       { headerName: "Category", field: "category", flex: 1.2 },
+      {
+        headerName: "Type",
+        field: "type",
+        maxWidth: 140,
+        cellRenderer: RecentTypeCell,
+      },
       { headerName: "Notes", field: "notes", flex: 1.4 },
       {
         headerName: "Amount",

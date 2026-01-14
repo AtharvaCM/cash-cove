@@ -31,6 +31,7 @@ import {
   useGetSubscriptionsQuery,
 } from "../features/api/apiSlice";
 import { getUpcomingSubscriptions, isSubscriptionOverdue } from "../lib/subscriptions";
+import { useAppMonth } from "../context/AppMonthContext";
 
 const PIN_OPTIONS: DashboardPinOption[] = [
   {
@@ -88,6 +89,7 @@ const PIN_OPTIONS: DashboardPinOption[] = [
 const PIN_IDS = PIN_OPTIONS.map((option) => option.id);
 
 export const Dashboard = () => {
+  const { month } = useAppMonth();
   const [rollupCategories, setRollupCategories] = useState(() => {
     if (typeof window === "undefined") {
       return true;
@@ -145,8 +147,8 @@ export const Dashboard = () => {
     funds,
     categoryTotals,
     categoryBudgets,
-  } = useDashboardData({ rollupCategories });
-  const previousMonth = dayjs().subtract(1, "month").format("YYYY-MM");
+  } = useDashboardData({ selectedMonth: month, rollupCategories });
+  const previousMonth = dayjs(month + "-01").subtract(1, "month").format("YYYY-MM");
   const {
     transactions: previousTransactions,
     totalSpent: previousTotalSpent,

@@ -1,5 +1,4 @@
-import { Badge, Button, Group, Paper, Stack, Text, Title } from "@mantine/core";
-import { MonthPickerInput } from "@mantine/dates";
+import { Badge, Button, Group, Paper, Progress, SimpleGrid, Stack, Text, Title } from "@mantine/core";
 import { Copy, Layers, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
@@ -17,59 +16,84 @@ import { BudgetFormModal } from "../components/budgets/BudgetFormModal";
 import { BudgetBulkModal } from "../components/budgets/BudgetBulkModal";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import type { Budget } from "../types/finance";
+import { useAppMonth } from "../context/AppMonthContext";
 
 type BudgetRow = {
   id: string;
   category: string;
   amount: number;
   spend: number;
+  remaining: number;
+  ratio: number;
   status: "over" | "near" | "ok" | "none";
 };
 
-const BudgetSpendCell = (params: ICellRendererParams<BudgetRow>) => {
-  const spend = Number(params.value ?? 0);
+const BudgetAllocationCell = (params: ICellRendererParams<BudgetRow>) => {
+  const spend = params.data?.spend ?? 0;
   const amount = params.data?.amount ?? 0;
+  const remaining = params.data?.remaining ?? 0;
+  const ratio = params.data?.ratio ?? 0;
   const status = params.data?.status ?? "ok";
-  let color = "#2f9e44";
-  let label = "Within budget";
-
+  let color = "teal";
+  let helper = "Within budget";
   if (amount === 0 && spend > 0) {
-    color = "#e03131";
-    label = "No budget";
+    color = "red";
+    helper = "No budget set";
   } else if (status === "over") {
-    color = "#e03131";
-    label = "Over budget";
+    color = "red";
+    helper = "Over budget";
   } else if (status === "near") {
-    color = "#f08c00";
-    label = "Near limit";
+    color = "orange";
+    helper = "Near limit";
+  } else if (amount === 0) {
+    color = "gray";
+    helper = "No allocation";
   }
 
+  const progressValue =
+    amount > 0 ? Math.min(100, Math.round((ratio || 0) * 100)) : 0;
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-      }}
-      title={label}
-    >
-      <span
-        style={{
-          display: "inline-flex",
-          width: 10,
-          height: 10,
-          borderRadius: "999px",
-          background: color,
-          flexShrink: 0,
-        }}
-      />
-      <span>{formatINR(spend)}</span>
-    </div>
+    <Stack gap="xs" style={{ width: "100%" }}>
+      <SimpleGrid cols={3} spacing="lg">
+        <Text size="xs" c="dimmed">
+          Allocated
+        </Text>
+        <Text size="xs" c="dimmed">
+          Spent
+        </Text>
+        <Text size="xs" c="dimmed" ta="right">
+          Remaining
+        </Text>
+      </SimpleGrid>
+      <SimpleGrid cols={3} spacing="lg">
+        <Text size="sm" fw={600}>
+          {formatINR(amount)}
+        </Text>
+        <Text size="sm" fw={600}>
+          {formatINR(spend)}
+        </Text>
+        <Text size="sm" fw={600} c={remaining < 0 ? "red.6" : "dimmed"} ta="right">
+          {formatINR(remaining)}
+        </Text>
+      </SimpleGrid>
+      <Group justify="space-between" align="center" wrap="nowrap" gap="sm">
+        <Progress
+          value={progressValue}
+          color={color}
+          size="sm"
+          radius="xl"
+          style={{ flex: 1 }}
+        />
+      </Group>
+      <Text size="xs" c="dimmed">
+        {helper}
+      </Text>
+    </Stack>
   );
 };
 
 export const Budgets = () => {
-  const [month, setMonth] = useState(dayjs().format("YYYY-MM"));
+  const { month } = useAppMonth();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isBulkOpen, setIsBulkOpen] = useState(false);
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
@@ -134,6 +158,21 @@ export const Budgets = () => {
           budget.category_id === null
             ? spendMap.get("overall") ?? 0
             : spendMap.get(budget.category_id) ?? 0,
+        remaining:
+          budget.amount -
+          (budget.category_id === null
+            ? spendMap.get("overall") ?? 0
+            : spendMap.get(budget.category_id) ?? 0),
+        ratio: (() => {
+          const spend =
+            budget.category_id === null
+              ? spendMap.get("overall") ?? 0
+              : spendMap.get(budget.category_id) ?? 0;
+          if (budget.amount === 0) {
+            return spend > 0 ? 1 : 0;
+          }
+          return spend / budget.amount;
+        })(),
         status: (() => {
           const spend =
             budget.category_id === null
@@ -153,18 +192,13 @@ export const Budgets = () => {
 
   const columns = useMemo<ColDef<BudgetRow>[]>(
     () => [
-      { headerName: "Category", field: "category", flex: 1.4 },
+      { headerName: "Category", field: "category", flex: 1.2 },
       {
-        headerName: "Budget",
+        headerName: "Allocation",
         field: "amount",
-        maxWidth: 180,
-        valueFormatter: (params) => formatINR(Number(params.value ?? 0)),
-      },
-      {
-        headerName: "Spent",
-        field: "spend",
-        maxWidth: 200,
-        cellRenderer: BudgetSpendCell,
+        flex: 2,
+        cellRenderer: BudgetAllocationCell,
+        cellClass: "datatrix-cell-top datatrix-cell-wrap",
       },
     ],
     []
@@ -288,15 +322,6 @@ export const Budgets = () => {
             </Text>
           </Stack>
           <Group gap="sm" align="flex-end" wrap="wrap">
-            <MonthPickerInput
-              label="Month"
-              value={dayjs(month + "-01").toDate()}
-              onChange={(value) => value && setMonth(dayjs(value).format("YYYY-MM"))}
-              maxDate={dayjs().endOf("month").toDate()}
-              size="xs"
-              clearable={false}
-              styles={{ input: { width: 160 } }}
-            />
             <Badge variant="light" color="blue">
               Budget alerts (80%)
             </Badge>
@@ -327,6 +352,7 @@ export const Budgets = () => {
           loading={isBudgetsLoading}
           getRowId={(row) => row.id}
           onRowClick={(row) => handleEditBudget(row.id)}
+          rowHeight={96}
         />
       </Paper>
     </Stack>

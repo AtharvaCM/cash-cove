@@ -1,18 +1,21 @@
 import {
   ActionIcon,
+  Badge,
   Button,
   Group,
   Modal,
   Paper,
+  SimpleGrid,
+  Switch,
   Select,
   Stack,
   Text,
   TextInput,
   Title,
 } from "@mantine/core";
-import { DateInput, MonthPickerInput } from "@mantine/dates";
+import { DateInput } from "@mantine/dates";
 import { Plus, Save, Trash2, Upload } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import dayjs from "dayjs";
 import {
   useGetAccountsQuery,
@@ -20,17 +23,19 @@ import {
   useGetPaymentMethodsQuery,
   useGetTagsQuery,
   useGetTransactionsQuery,
+  useUpdateTransactionMutation,
 } from "../features/api/apiSlice";
 import { formatINR } from "../lib/format";
 import { DatatrixTable } from "../components/DatatrixTable";
 import { TransactionFormModal } from "../components/transactions/TransactionFormModal";
 import { TransactionImportModal } from "../components/transactions/TransactionImportModal";
 import { useSearchParams } from "react-router-dom";
-import type { ColDef } from "ag-grid-community";
+import type { ColDef, GridApi, ICellRendererParams } from "ag-grid-community";
 import type { Transaction } from "../types/finance";
 import { ActiveFilterChips, type ActiveFilterChip } from "../components/filters/ActiveFilterChips";
 import { loadSavedFilters, saveSavedFilters, type SavedFilter } from "../lib/savedFilters";
 import { useAppSelector } from "../app/hooks";
+import { useAppMonth } from "../context/AppMonthContext";
 
 type TransactionRow = {
   id: string;
@@ -42,7 +47,28 @@ type TransactionRow = {
   tags: string;
   amount: number;
   type: Transaction["type"];
-  flag: string;
+  isTransfer: boolean;
+};
+
+const TransactionTypeCell = (params: ICellRendererParams<TransactionRow>) => {
+  const isTransfer = params.data?.isTransfer;
+  const type = params.data?.type ?? "expense";
+  if (isTransfer) {
+    return (
+      <Badge variant="light" color="gray" radius="sm">
+        Transfer
+      </Badge>
+    );
+  }
+  return (
+    <Badge
+      variant="light"
+      color={type === "income" ? "teal" : "red"}
+      radius="sm"
+    >
+      {type === "income" ? "Income" : "Expense"}
+    </Badge>
+  );
 };
 
 type TransactionFilters = {
@@ -60,7 +86,7 @@ const buildFiltersKey = (userId?: string | null) =>
 
 export const Transactions = () => {
   const userId = useAppSelector((state) => state.auth.user?.id ?? null);
-  const [month, setMonth] = useState(dayjs().format("YYYY-MM"));
+  const { month } = useAppMonth();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<
@@ -79,6 +105,17 @@ export const Transactions = () => {
   const [savedFilters, setSavedFilters] = useState<
     SavedFilter<TransactionFilters>[]
   >(() => loadSavedFilters(buildFiltersKey(userId)));
+  const [selectedRows, setSelectedRows] = useState<TransactionRow[]>([]);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkCategoryEnabled, setBulkCategoryEnabled] = useState(false);
+  const [bulkCategoryId, setBulkCategoryId] = useState<string | null>(null);
+  const [bulkAccountEnabled, setBulkAccountEnabled] = useState(false);
+  const [bulkAccountId, setBulkAccountId] = useState<string | null>(null);
+  const [bulkTagsEnabled, setBulkTagsEnabled] = useState(false);
+  const [bulkTags, setBulkTags] = useState("");
+  const [bulkError, setBulkError] = useState<string | null>(null);
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const gridApiRef = useRef<GridApi<TransactionRow> | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const actionParam = searchParams.get("action");
   const formVisible = isFormOpen || actionParam === "new";
@@ -91,6 +128,7 @@ export const Transactions = () => {
   const { data: tags = [] } = useGetTagsQuery();
   const { data: transactions = [], isLoading: isTransactionsLoading } =
     useGetTransactionsQuery({ month });
+  const [updateTransaction] = useUpdateTransactionMutation();
 
   const categoryMap = useMemo(
     () => new Map(categories.map((category) => [category.id, category.name])),
@@ -170,26 +208,40 @@ export const Transactions = () => {
         tags: tx.tags?.length ? tx.tags.map((tag) => tag.name).join(", ") : "-",
         amount: tx.amount,
         type: tx.type,
-        flag: tx.is_transfer ? "Transfer" : "",
+        isTransfer: Boolean(tx.is_transfer),
       })),
     [filteredTransactions, categoryMap, paymentMap, accountMap]
   );
+  const transactionMap = useMemo(
+    () => new Map(transactions.map((tx) => [tx.id, tx])),
+    [transactions]
+  );
   const columns = useMemo<ColDef<TransactionRow>[]>(
     () => [
+      {
+        headerName: "",
+        field: "select",
+        width: 48,
+        checkboxSelection: true,
+        headerCheckboxSelection: true,
+        sortable: false,
+        resizable: false,
+        pinned: "left",
+      },
       { headerName: "Date", field: "date", maxWidth: 120 },
       {
         headerName: "Category",
         field: "category",
         flex: 1.2,
       },
+      {
+        headerName: "Type",
+        field: "type",
+        maxWidth: 140,
+        cellRenderer: TransactionTypeCell,
+      },
       { headerName: "Account", field: "account", flex: 1 },
       { headerName: "Payment", field: "payment", flex: 1 },
-      {
-        headerName: "Flag",
-        field: "flag",
-        maxWidth: 140,
-        cellClass: "datatrix-cell-muted",
-      },
       {
         headerName: "Notes",
         field: "notes",
@@ -336,6 +388,113 @@ export const Transactions = () => {
     accountMap,
   ]);
 
+  const bulkCategoryOptions = useMemo(
+    () => [
+      { value: "uncategorized", label: "Uncategorized" },
+      ...categories.map((category) => ({
+        value: category.id,
+        label: category.name,
+      })),
+    ],
+    [categories]
+  );
+  const bulkAccountOptions = useMemo(
+    () => [
+      { value: "none", label: "No account" },
+      ...accounts.map((account) => ({
+        value: account.id,
+        label: account.name,
+      })),
+    ],
+    [accounts]
+  );
+
+  const selectedIds = useMemo(
+    () => selectedRows.map((row) => row.id),
+    [selectedRows]
+  );
+
+  const handleOpenBulk = () => {
+    if (selectedIds.length === 0) {
+      return;
+    }
+    setBulkError(null);
+    setBulkCategoryEnabled(false);
+    setBulkCategoryId(null);
+    setBulkAccountEnabled(false);
+    setBulkAccountId(null);
+    setBulkTagsEnabled(false);
+    setBulkTags("");
+    setBulkOpen(true);
+  };
+
+  const handleCloseBulk = () => {
+    setBulkOpen(false);
+    setBulkError(null);
+  };
+
+  const handleClearSelection = () => {
+    gridApiRef.current?.deselectAll();
+    setSelectedRows([]);
+  };
+
+  const handleApplyBulk = async () => {
+    if (selectedIds.length === 0) {
+      return;
+    }
+    if (!bulkCategoryEnabled && !bulkAccountEnabled && !bulkTagsEnabled) {
+      setBulkError("Select at least one field to update.");
+      return;
+    }
+    setBulkSaving(true);
+    setBulkError(null);
+    const nextTags = bulkTagsEnabled
+      ? bulkTags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean)
+      : [];
+    try {
+      for (const id of selectedIds) {
+        const transaction = transactionMap.get(id);
+        if (!transaction) continue;
+        const nextCategoryId = bulkCategoryEnabled
+          ? bulkCategoryId === "uncategorized"
+            ? null
+            : bulkCategoryId
+          : transaction.category_id ?? null;
+        const nextAccountId = bulkAccountEnabled
+          ? bulkAccountId === "none"
+            ? null
+            : bulkAccountId
+          : transaction.account_id ?? null;
+        const nextTagsFinal = bulkTagsEnabled
+          ? nextTags
+          : transaction.tags?.map((tag) => tag.name) ?? [];
+
+        await updateTransaction({
+          id: transaction.id,
+          type: transaction.type,
+          date: transaction.date,
+          amount: transaction.amount,
+          category_id: nextCategoryId,
+          payment_method_id: transaction.payment_method_id ?? null,
+          account_id: nextAccountId,
+          notes: transaction.notes ?? null,
+          tags: nextTagsFinal,
+          is_transfer: transaction.is_transfer ?? false,
+          is_recurring: transaction.is_recurring,
+        }).unwrap();
+      }
+      setBulkOpen(false);
+      handleClearSelection();
+    } catch {
+      setBulkError("Unable to apply bulk changes. Try again.");
+    } finally {
+      setBulkSaving(false);
+    }
+  };
+
   const persistSavedFilters = (next: SavedFilter<TransactionFilters>[]) => {
     setSavedFilters(next);
     saveSavedFilters(buildFiltersKey(userId), next);
@@ -422,6 +581,109 @@ export const Transactions = () => {
           </Group>
         </Stack>
       </Modal>
+      <Modal
+        opened={bulkOpen}
+        onClose={handleCloseBulk}
+        title={`Bulk edit (${selectedIds.length})`}
+        size="md"
+      >
+        <Stack gap="sm">
+          <Group justify="space-between" align="center">
+            <Text size="sm" c="dimmed">
+              Apply changes to all selected transactions.
+            </Text>
+            <Button variant="subtle" color="gray" size="xs" onClick={handleClearSelection}>
+              Clear selection
+            </Button>
+          </Group>
+          <Stack gap="xs">
+            <Group justify="space-between" align="center">
+              <Text size="sm" fw={600}>
+                Category
+              </Text>
+              <Switch
+                checked={bulkCategoryEnabled}
+                onChange={(event) =>
+                  setBulkCategoryEnabled(event.currentTarget.checked)
+                }
+                size="sm"
+                label={bulkCategoryEnabled ? "Enabled" : "Skip"}
+              />
+            </Group>
+            <Select
+              data={bulkCategoryOptions}
+              value={bulkCategoryId}
+              onChange={setBulkCategoryId}
+              disabled={!bulkCategoryEnabled}
+              placeholder="Choose category"
+              searchable
+              clearable
+            />
+          </Stack>
+          <Stack gap="xs">
+            <Group justify="space-between" align="center">
+              <Text size="sm" fw={600}>
+                Account
+              </Text>
+              <Switch
+                checked={bulkAccountEnabled}
+                onChange={(event) =>
+                  setBulkAccountEnabled(event.currentTarget.checked)
+                }
+                size="sm"
+                label={bulkAccountEnabled ? "Enabled" : "Skip"}
+              />
+            </Group>
+            <Select
+              data={bulkAccountOptions}
+              value={bulkAccountId}
+              onChange={setBulkAccountId}
+              disabled={!bulkAccountEnabled}
+              placeholder="Choose account"
+              searchable
+              clearable
+            />
+          </Stack>
+          <Stack gap="xs">
+            <Group justify="space-between" align="center">
+              <Text size="sm" fw={600}>
+                Tags
+              </Text>
+              <Switch
+                checked={bulkTagsEnabled}
+                onChange={(event) =>
+                  setBulkTagsEnabled(event.currentTarget.checked)
+                }
+                size="sm"
+                label={bulkTagsEnabled ? "Enabled" : "Skip"}
+              />
+            </Group>
+            <TextInput
+              value={bulkTags}
+              onChange={(event) => setBulkTags(event.target.value)}
+              disabled={!bulkTagsEnabled}
+              placeholder="comma separated"
+            />
+          </Stack>
+          {bulkError ? (
+            <Text size="sm" c="red">
+              {bulkError}
+            </Text>
+          ) : null}
+          <Group justify="flex-end">
+            <Button variant="subtle" color="gray" onClick={handleCloseBulk}>
+              Cancel
+            </Button>
+            <Button
+              color="green"
+              loading={bulkSaving}
+              onClick={handleApplyBulk}
+            >
+              Apply changes
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
       <TransactionFormModal
         key={formKey}
         opened={formVisible}
@@ -452,15 +714,6 @@ export const Transactions = () => {
             </Text>
           </Stack>
           <Group gap="sm" align="flex-end" wrap="wrap">
-            <MonthPickerInput
-              label="Month"
-              value={dayjs(month + "-01").toDate()}
-              onChange={(value) => value && setMonth(dayjs(value).format("YYYY-MM"))}
-              maxDate={dayjs().endOf("month").toDate()}
-              size="xs"
-              clearable={false}
-              styles={{ input: { width: 160 } }}
-            />
             <Button
               variant="light"
               onClick={() => setIsImportOpen(true)}
@@ -473,97 +726,140 @@ export const Transactions = () => {
             </Button>
           </Group>
         </Group>
-        <Stack gap="sm" mb="md">
-          <Group gap="sm" align="flex-end" wrap="wrap">
-            <TextInput
-              label="Search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Category, account, tags, notes"
-            />
-            <Select
-              label="Account"
-              data={accounts.map((account) => ({
-                value: account.id,
-                label: account.name,
-              }))}
-              value={filterAccount || null}
-              onChange={(value) => setFilterAccount(value ?? "")}
-              clearable
-              searchable
-            />
-            <Select
-              label="Tag"
-              data={tags.map((tag) => ({ value: tag.name, label: tag.name }))}
-              value={filterTag || null}
-              onChange={(value) => setFilterTag(value ?? "")}
-              clearable
-              searchable
-            />
-            <DateInput
-              label="From"
-              value={filterFrom ? dayjs(filterFrom).toDate() : null}
-              onChange={(value) =>
-                setFilterFrom(value ? dayjs(value).format("YYYY-MM-DD") : "")
-              }
-              clearable
-            />
-            <DateInput
-              label="To"
-              value={filterTo ? dayjs(filterTo).toDate() : null}
-              onChange={(value) =>
-                setFilterTo(value ? dayjs(value).format("YYYY-MM-DD") : "")
-              }
-              clearable
-            />
-            <TextInput
-              label="Min amount"
-              type="number"
-              value={minAmount}
-              onChange={(event) => setMinAmount(event.target.value)}
-              placeholder="0"
-              min="0"
-              step="0.01"
-            />
-            <TextInput
-              label="Max amount"
-              type="number"
-              value={maxAmount}
-              onChange={(event) => setMaxAmount(event.target.value)}
-              placeholder="0"
-              min="0"
-              step="0.01"
-            />
-            <Select
-              label="Saved"
-              data={savedFilterOptions}
-              value={selectedSavedId}
-              onChange={handleApplySavedFilter}
-              placeholder="Choose"
-              clearable
-            />
-            <Group gap="xs">
-              <ActionIcon
-                variant="light"
-                color="blue"
-                size="lg"
-                onClick={() => setSaveModalOpen(true)}
-                aria-label="Save current filters"
-              >
-                <Save size={16} strokeWidth={2} />
-              </ActionIcon>
-              <ActionIcon
-                variant="light"
-                color="red"
-                size="lg"
-                onClick={handleDeleteSavedFilter}
-                disabled={!selectedSavedId}
-                aria-label="Delete saved filter"
-              >
-                <Trash2 size={16} strokeWidth={2} />
-              </ActionIcon>
+        {selectedIds.length > 0 ? (
+          <Paper withBorder radius="md" p="sm" mb="md">
+            <Group justify="space-between" align="center" wrap="wrap">
+              <Text size="sm">
+                {selectedIds.length} selected
+              </Text>
+              <Group gap="xs">
+                <Button size="xs" variant="light" onClick={handleOpenBulk}>
+                  Bulk edit
+                </Button>
+                <Button size="xs" variant="subtle" color="gray" onClick={handleClearSelection}>
+                  Clear
+                </Button>
+              </Group>
             </Group>
-          </Group>
+          </Paper>
+        ) : null}
+        <Stack gap="xs" mb="md">
+          <Paper withBorder radius="md" p="sm">
+            <SimpleGrid cols={{ base: 1, sm: 2, md: 3, xl: 6 }} spacing="sm">
+              <TextInput
+                label="Search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Category, account, tags, notes"
+                size="xs"
+              />
+              <Select
+                label="Account"
+                data={accounts.map((account) => ({
+                  value: account.id,
+                  label: account.name,
+                }))}
+                value={filterAccount || null}
+                onChange={(value) => setFilterAccount(value ?? "")}
+                clearable
+                searchable
+                size="xs"
+              />
+              <Select
+                label="Tag"
+                data={tags.map((tag) => ({ value: tag.name, label: tag.name }))}
+                value={filterTag || null}
+                onChange={(value) => setFilterTag(value ?? "")}
+                clearable
+                searchable
+                size="xs"
+              />
+              <Group gap="xs" align="flex-end" wrap="nowrap" style={{ minWidth: 0 }}>
+                <DateInput
+                  label="From"
+                  value={filterFrom ? dayjs(filterFrom).toDate() : null}
+                  onChange={(value) =>
+                    setFilterFrom(
+                      value ? dayjs(value).format("YYYY-MM-DD") : ""
+                    )
+                  }
+                  clearable
+                  size="xs"
+                  styles={{ input: { minWidth: 0 } }}
+                  style={{ flex: 1 }}
+                />
+                <DateInput
+                  label="To"
+                  value={filterTo ? dayjs(filterTo).toDate() : null}
+                  onChange={(value) =>
+                    setFilterTo(value ? dayjs(value).format("YYYY-MM-DD") : "")
+                  }
+                  clearable
+                  size="xs"
+                  styles={{ input: { minWidth: 0 } }}
+                  style={{ flex: 1 }}
+                />
+              </Group>
+              <Group gap="xs" align="flex-end" wrap="nowrap" style={{ minWidth: 0 }}>
+                <TextInput
+                  label="Min"
+                  type="number"
+                  value={minAmount}
+                  onChange={(event) => setMinAmount(event.target.value)}
+                  placeholder="0"
+                  min="0"
+                  step="0.01"
+                  size="xs"
+                  styles={{ input: { minWidth: 0 } }}
+                  style={{ flex: 1 }}
+                />
+                <TextInput
+                  label="Max"
+                  type="number"
+                  value={maxAmount}
+                  onChange={(event) => setMaxAmount(event.target.value)}
+                  placeholder="0"
+                  min="0"
+                  step="0.01"
+                  size="xs"
+                  styles={{ input: { minWidth: 0 } }}
+                  style={{ flex: 1 }}
+                />
+              </Group>
+              <Group gap="xs" align="flex-end" wrap="nowrap" style={{ minWidth: 0 }}>
+                <Select
+                  label="Saved"
+                  data={savedFilterOptions}
+                  value={selectedSavedId}
+                  onChange={handleApplySavedFilter}
+                  placeholder="Choose"
+                  clearable
+                  size="xs"
+                  styles={{ input: { minWidth: 0 } }}
+                  style={{ flex: 1 }}
+                />
+                <ActionIcon
+                  variant="light"
+                  color="blue"
+                  size="sm"
+                  onClick={() => setSaveModalOpen(true)}
+                  aria-label="Save current filters"
+                >
+                  <Save size={14} strokeWidth={2} />
+                </ActionIcon>
+                <ActionIcon
+                  variant="light"
+                  color="red"
+                  size="sm"
+                  onClick={handleDeleteSavedFilter}
+                  disabled={!selectedSavedId}
+                  aria-label="Delete saved filter"
+                >
+                  <Trash2 size={14} strokeWidth={2} />
+                </ActionIcon>
+              </Group>
+            </SimpleGrid>
+          </Paper>
           <ActiveFilterChips items={activeChips} />
         </Stack>
         <DatatrixTable
@@ -574,6 +870,11 @@ export const Transactions = () => {
           loading={isTransactionsLoading}
           getRowId={(row) => row.id}
           onRowClick={(row) => handleEditTransaction(row.id)}
+          enableSelection
+          onSelectionChanged={(rows) => setSelectedRows(rows)}
+          onGridReady={(event) => {
+            gridApiRef.current = event.api;
+          }}
         />
       </Paper>
     </Stack>

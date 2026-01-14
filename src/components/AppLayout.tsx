@@ -13,7 +13,9 @@ import {
   Title,
   Tooltip,
 } from "@mantine/core";
+import { MonthPickerInput } from "@mantine/dates";
 import { useMediaQuery } from "@mantine/hooks";
+import dayjs from "dayjs";
 import {
   LayoutGrid,
   TrendingUp,
@@ -40,6 +42,7 @@ import { apiSlice } from "../features/api/apiSlice";
 import { clearAuth } from "../features/auth/authSlice";
 import { supabase } from "../lib/supabaseClient";
 import { QuickAddDrawer } from "./quickAdd/QuickAddDrawer";
+import { useAppMonth } from "../context/AppMonthContext";
 
 export const AppLayout = () => {
   const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -55,6 +58,7 @@ export const AppLayout = () => {
   const [isSidebarHovering, setIsSidebarHovering] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const isMobile = useMediaQuery("(max-width: 900px)");
+  const { month, setMonth } = useAppMonth();
   const isNavExpanded = useMemo(
     () => isMobile || !isCollapsed || isSidebarHovering,
     [isCollapsed, isSidebarHovering, isMobile]
@@ -119,7 +123,11 @@ export const AppLayout = () => {
       }
       const target = event.target as HTMLElement | null;
       const tagName = target?.tagName?.toLowerCase();
-      if (tagName === "input" || tagName === "textarea" || tagName === "select") {
+      if (
+        tagName === "input" ||
+        tagName === "textarea" ||
+        tagName === "select"
+      ) {
         return;
       }
       event.preventDefault();
@@ -133,7 +141,11 @@ export const AppLayout = () => {
     { to: "/", label: "Overview", icon: <LayoutGrid size={18} /> },
     { to: "/cashflow", label: "Cashflow", icon: <TrendingUp size={18} /> },
     { to: "/transactions", label: "Transactions", icon: <List size={18} /> },
-    { to: "/subscriptions", label: "Subscriptions", icon: <Repeat size={18} /> },
+    {
+      to: "/subscriptions",
+      label: "Subscriptions",
+      icon: <Repeat size={18} />,
+    },
     { to: "/reports", label: "Reports", icon: <BarChart3 size={18} /> },
     { to: "/budgets", label: "Budgets", icon: <Wallet size={18} /> },
     { to: "/funds", label: "Funds", icon: <PiggyBank size={18} /> },
@@ -326,13 +338,25 @@ export const AppLayout = () => {
                 </Badge>
               </Group>
             </Stack>
-            <Group gap="xs" className="topbar-actions">
+            <Group gap="xs" className="topbar-actions" align="flex-end">
+              <MonthPickerInput
+                label="Month"
+                value={dayjs(month + "-01").toDate()}
+                onChange={(value) =>
+                  value && setMonth(dayjs(value).format("YYYY-MM"))
+                }
+                maxDate={dayjs().endOf("month").toDate()}
+                size="xs"
+                clearable={false}
+                styles={{ input: { width: 160 } }}
+              />
               <Button
                 variant="light"
                 color="blue"
                 size="compact-sm"
                 onClick={() => setQuickAddOpen(true)}
                 leftSection={<Plus size={16} strokeWidth={2} />}
+                style={{ marginBottom: "2px" }}
               >
                 Quick add
               </Button>
@@ -342,6 +366,7 @@ export const AppLayout = () => {
                 size="compact-sm"
                 onClick={() => window.location.reload()}
                 leftSection={<RefreshCcw size={16} strokeWidth={2} />}
+                style={{ marginBottom: "2px" }}
               >
                 Refresh
               </Button>

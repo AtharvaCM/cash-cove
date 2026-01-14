@@ -16,6 +16,7 @@ import { NotFound } from "./pages/NotFound";
 import { Transactions } from "./pages/Transactions";
 import { Subscriptions } from "./pages/Subscriptions";
 import { Reports } from "./pages/Reports";
+import { AppMonthProvider } from "./context/AppMonthContext";
 
 const App = () => {
   const dispatch = useAppDispatch();
@@ -58,7 +59,9 @@ const App = () => {
         path="/"
         element={
           <ProtectedRoute>
-            <AppLayout />
+            <AppMonthProvider>
+              <AppLayout />
+            </AppMonthProvider>
           </ProtectedRoute>
         }
       >

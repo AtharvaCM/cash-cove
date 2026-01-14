@@ -10,7 +10,6 @@ import {
   Text,
   TextInput,
   Textarea,
-  Title,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import dayjs from "dayjs";
@@ -325,7 +324,7 @@ export const QuickAddDrawer = ({ opened, onClose }: QuickAddDrawerProps) => {
     <Drawer
       opened={opened}
       onClose={handleClose}
-      title={<Title order={4}>Quick add</Title>}
+      title="Quick add"
       position="right"
       size="lg"
       padding="md"

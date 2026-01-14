@@ -145,7 +145,7 @@ p {
 
 .topbar-actions {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
 }
 
@@ -745,6 +745,7 @@ button.link:not([class*="mantine-"]) {
     width: 100%;
     justify-content: flex-start;
     flex-wrap: wrap;
+    align-items: flex-start;
   }
 
   .table-row {

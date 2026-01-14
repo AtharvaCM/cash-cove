@@ -346,7 +346,7 @@ export const TransactionFormModal = ({
             onChange={(event) =>
               setForm((prev) => ({
                 ...prev,
-                is_transfer: event.currentTarget.checked,
+                is_transfer: event?.currentTarget?.checked ?? false,
               }))
             }
           />
@@ -364,7 +364,7 @@ export const TransactionFormModal = ({
             onChange={(event) =>
               setForm((prev) => ({
                 ...prev,
-                is_recurring: event.currentTarget.checked,
+                is_recurring: event?.currentTarget?.checked ?? false,
               }))
             }
           />

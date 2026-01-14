@@ -4,6 +4,7 @@ import type {
   ColDef,
   GridOptions,
   CellValueChangedEvent,
+  GridReadyEvent,
 } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
@@ -15,10 +16,14 @@ export type DatatrixTableProps<T> = {
   height?: number | string;
   loading?: boolean;
   emptyLabel?: string;
+  rowHeight?: number;
+  enableSelection?: boolean;
   getRowId?: (data: T) => string;
   onRowClick?: (row: T) => void;
   onRowDoubleClick?: (row: T) => void;
   onCellValueChanged?: (event: CellValueChangedEvent<T>) => void;
+  onSelectionChanged?: (rows: T[]) => void;
+  onGridReady?: (event: GridReadyEvent<T>) => void;
 };
 
 export const DatatrixTable = <T,>({
@@ -27,10 +32,14 @@ export const DatatrixTable = <T,>({
   height,
   loading = false,
   emptyLabel = "No data available",
+  rowHeight = 44,
+  enableSelection = false,
   getRowId,
   onRowClick,
   onRowDoubleClick,
   onCellValueChanged,
+  onSelectionChanged,
+  onGridReady,
 }: DatatrixTableProps<T>) => {
   const defaultColDef = useMemo<ColDef<T>>(
     () => ({
@@ -46,14 +55,17 @@ export const DatatrixTable = <T,>({
     () => ({
       theme: "legacy",
       animateRows: true,
-      rowHeight: 44,
+      rowHeight,
       headerHeight: 42,
       suppressCellFocus: false,
       overlayNoRowsTemplate: `<span class="muted">${emptyLabel}</span>`,
       rowClass:
         onRowClick || onRowDoubleClick ? "datatrix-row-clickable" : undefined,
+      rowSelection: enableSelection ? "multiple" : undefined,
+      rowMultiSelectWithClick: enableSelection,
+      suppressRowClickSelection: enableSelection,
     }),
-    [emptyLabel, onRowClick, onRowDoubleClick]
+    [emptyLabel, enableSelection, onRowClick, onRowDoubleClick, rowHeight]
   );
 
   const tableClassName = `ag-theme-alpine datatrix-table${
@@ -69,7 +81,7 @@ export const DatatrixTable = <T,>({
           defaultColDef={defaultColDef}
           gridOptions={gridOptions}
           domLayout={height ? "normal" : "autoHeight"}
-          suppressRowClickSelection
+          suppressRowClickSelection={enableSelection}
           suppressCellFocus={false}
           overlayLoadingTemplate={
             loading ? "<span class='muted'>Loading...</span>" : undefined
@@ -79,6 +91,10 @@ export const DatatrixTable = <T,>({
             onRowClick
               ? (event) => {
                   if (event.data) {
+                    const target = event.event?.target as HTMLElement | null;
+                    if (target?.closest?.(".ag-selection-checkbox")) {
+                      return;
+                    }
                     onRowClick(event.data);
                   }
                 }
@@ -94,6 +110,15 @@ export const DatatrixTable = <T,>({
               : undefined
           }
           onCellValueChanged={onCellValueChanged}
+          onSelectionChanged={
+            onSelectionChanged
+              ? (event) => {
+                  const selected = event.api.getSelectedRows();
+                  onSelectionChanged(selected as T[]);
+                }
+              : undefined
+          }
+          onGridReady={onGridReady}
         />
       </div>
     </div>

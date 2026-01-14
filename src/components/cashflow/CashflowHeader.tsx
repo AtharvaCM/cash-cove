@@ -7,14 +7,11 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import { MonthPickerInput } from "@mantine/dates";
-import dayjs from "dayjs";
 import { Download, Filter, Tag } from "lucide-react";
 
 type SelectOption = { value: string; label: string };
 
 type CashflowHeaderProps = {
-  month: string;
   monthLabel: string;
   paymentFilter: string;
   tagFilter: string;
@@ -22,14 +19,12 @@ type CashflowHeaderProps = {
   tagOptions: SelectOption[];
   filteredCount: number;
   totalCount: number;
-  onMonthChange: (value: string) => void;
   onPaymentChange: (value: string | null) => void;
   onTagChange: (value: string | null) => void;
   onExport: () => void;
 };
 
 export const CashflowHeader = ({
-  month,
   monthLabel,
   paymentFilter,
   tagFilter,
@@ -37,7 +32,6 @@ export const CashflowHeader = ({
   tagOptions,
   filteredCount,
   totalCount,
-  onMonthChange,
   onPaymentChange,
   onTagChange,
   onExport,
@@ -51,15 +45,6 @@ export const CashflowHeader = ({
         </Text>
       </Stack>
       <Group gap="sm" align="flex-end" wrap="wrap">
-        <MonthPickerInput
-          label="Month"
-          value={dayjs(month + "-01").toDate()}
-          onChange={(value) => value && onMonthChange(dayjs(value).format("YYYY-MM"))}
-          maxDate={dayjs().endOf("month").toDate()}
-          size="xs"
-          clearable={false}
-          styles={{ input: { width: 160 } }}
-        />
         <Select
           label="Payment"
           data={paymentOptions}

@@ -1,14 +1,14 @@
 import { Stack } from "@mantine/core";
 import { useState } from "react";
-import dayjs from "dayjs";
 import { CashflowHeader } from "../components/cashflow/CashflowHeader";
 import { CashflowSummaryCards } from "../components/cashflow/CashflowSummaryCards";
 import { CashflowWeeklyChart } from "../components/cashflow/CashflowWeeklyChart";
 import { CashflowCategoryTables } from "../components/cashflow/CashflowCategoryTables";
 import { useCashflowData } from "../hooks/useCashflowData";
+import { useAppMonth } from "../context/AppMonthContext";
 
 export const Cashflow = () => {
-  const [month, setMonth] = useState(dayjs().format("YYYY-MM"));
+  const { month } = useAppMonth();
   const [paymentFilter, setPaymentFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const {
@@ -82,7 +82,6 @@ export const Cashflow = () => {
   return (
     <Stack gap="lg">
       <CashflowHeader
-        month={month}
         monthLabel={monthLabel}
         paymentFilter={paymentFilter}
         tagFilter={tagFilter}
@@ -90,7 +89,6 @@ export const Cashflow = () => {
         tagOptions={tagSelectOptions}
         filteredCount={filteredCount}
         totalCount={totalCount}
-        onMonthChange={setMonth}
         onPaymentChange={(value) => setPaymentFilter(value ?? "")}
         onTagChange={(value) => setTagFilter(value ?? "")}
         onExport={handleExport}

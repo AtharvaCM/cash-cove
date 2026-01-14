@@ -80,6 +80,16 @@
   font-size: 14px;
 }
 
+.datatrix-table .datatrix-cell-top {
+  align-items: flex-start;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.datatrix-table .datatrix-cell-wrap .ag-cell-value {
+  white-space: normal;
+}
+
 .datatrix-table .ag-row-hover,
 .datatrix-table .ag-row-hover .ag-cell {
   background-color: rgba(37, 99, 235, 0.08) !important;

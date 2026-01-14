@@ -283,8 +283,9 @@ export const Subscriptions = () => {
         if (!prev[subscriptionId]) {
           return prev;
         }
-        const { [subscriptionId]: _ignored, ...rest } = prev;
-        return rest;
+        const next = { ...prev };
+        delete next[subscriptionId];
+        return next;
       });
 
       if (!subscription.account_id) {
@@ -334,8 +335,9 @@ export const Subscriptions = () => {
           if (!prev[subscriptionId]) {
             return prev;
           }
-          const { [subscriptionId]: _ignored, ...rest } = prev;
-          return rest;
+          const next = { ...prev };
+          delete next[subscriptionId];
+          return next;
         });
         return true;
       } catch {

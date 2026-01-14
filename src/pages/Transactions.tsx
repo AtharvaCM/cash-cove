@@ -1,7 +1,7 @@
 import { Button, Group, Paper, Stack, Text, Title } from "@mantine/core";
 import { MonthPickerInput } from "@mantine/dates";
 import { Upload, Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import {
   useGetAccountsQuery,
@@ -13,6 +13,7 @@ import { formatINR } from "../lib/format";
 import { DatatrixTable } from "../components/DatatrixTable";
 import { TransactionFormModal } from "../components/transactions/TransactionFormModal";
 import { TransactionImportModal } from "../components/transactions/TransactionImportModal";
+import { useSearchParams } from "react-router-dom";
 import type { ColDef } from "ag-grid-community";
 import type { Transaction } from "../types/finance";
 
@@ -23,6 +24,7 @@ export const Transactions = () => {
   const [editingTransactionId, setEditingTransactionId] = useState<
     string | null
   >(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { data: categories = [] } = useGetCategoriesQuery();
   const { data: paymentMethods = [] } = useGetPaymentMethodsQuery();
@@ -108,6 +110,22 @@ export const Transactions = () => {
     }
     return transactions.find((tx) => tx.id === editingTransactionId) ?? null;
   }, [transactions, editingTransactionId]);
+
+  useEffect(() => {
+    const action = searchParams.get("action");
+    if (!action) {
+      return;
+    }
+    if (action === "new") {
+      setEditingTransactionId(null);
+      setIsFormOpen(true);
+    } else if (action === "import") {
+      setIsImportOpen(true);
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete("action");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const handleOpenCreate = () => {
     setEditingTransactionId(null);

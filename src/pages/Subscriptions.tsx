@@ -12,6 +12,7 @@ import {
 import { CheckCircle2, Plus } from "lucide-react";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   useAddTransactionMutation,
   useGetAccountsQuery,
@@ -68,6 +69,7 @@ export const Subscriptions = () => {
       return false;
     }
   });
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isBulkPosting, setIsBulkPosting] = useState(false);
   const [bulkSummary, setBulkSummary] = useState<{
     total: number;
@@ -160,6 +162,20 @@ export const Subscriptions = () => {
     () => (needsAccountOnly ? rows.filter((row) => !row.hasAccount) : rows),
     [rows, needsAccountOnly]
   );
+
+  useEffect(() => {
+    const action = searchParams.get("action");
+    if (!action) {
+      return;
+    }
+    if (action === "new") {
+      setEditingId(null);
+      setIsFormOpen(true);
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete("action");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const handlePostPayment = useCallback(
     async (subscriptionId: string) => {

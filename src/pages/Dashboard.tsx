@@ -11,6 +11,7 @@ import { AttentionStrip } from "../components/dashboard/AttentionStrip";
 import { SoftCapAlerts } from "../components/dashboard/SoftCapAlerts";
 import { RecentActivityTable } from "../components/dashboard/RecentActivityTable";
 import { AccountBalances } from "../components/dashboard/AccountBalances";
+import { QuickActionsCard } from "../components/dashboard/QuickActionsCard";
 import { CoverageCard } from "../components/dashboard/CoverageCard";
 import { NetCashflowCard } from "../components/dashboard/NetCashflowCard";
 import { ForecastCard } from "../components/dashboard/ForecastCard";
@@ -28,6 +29,11 @@ import { useGetAccountsQuery, useGetSubscriptionsQuery } from "../features/api/a
 import { getUpcomingSubscriptions, isSubscriptionOverdue } from "../lib/subscriptions";
 
 const PIN_OPTIONS: DashboardPinOption[] = [
+  {
+    id: "quick-actions",
+    label: "Quick actions",
+    description: "Shortcuts to add transactions, subscriptions, and budgets.",
+  },
   {
     id: "setup-checklist",
     label: "Setup checklist",
@@ -222,6 +228,7 @@ export const Dashboard = () => {
   });
   const showSetupChecklistCard =
     showSetupChecklist && isPinned("setup-checklist");
+  const showQuickActionsCard = isPinned("quick-actions");
   const showWeeklyCheckInCard = isPinned("weekly-checkin");
   const showAttentionStrip = isPinned("attention");
   const showAccountBalances = isPinned("accounts");
@@ -238,6 +245,7 @@ export const Dashboard = () => {
     showForecastCard ||
     showUpcomingSubscriptionsCard;
   const visiblePinnedCount = [
+    showQuickActionsCard,
     showSetupChecklistCard,
     showWeeklyCheckInCard,
     showAttentionStrip,
@@ -348,6 +356,9 @@ export const Dashboard = () => {
         </Paper>
       ) : (
         <>
+          {showQuickActionsCard ? (
+            <QuickActionsCard style={sectionStyle(30)} />
+          ) : null}
           {showPriorityGroup ? (
             <Group
               align="stretch"

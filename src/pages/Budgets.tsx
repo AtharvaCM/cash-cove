@@ -1,8 +1,9 @@
 import { Badge, Button, Group, Paper, Stack, Text, Title } from "@mantine/core";
 import { MonthPickerInput } from "@mantine/dates";
 import { Copy, Layers, Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
+import { useSearchParams } from "react-router-dom";
 import {
   useGetBudgetsQuery,
   useGetCategoriesQuery,
@@ -32,6 +33,7 @@ export const Budgets = () => {
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Budget | null>(null);
   const [copying, setCopying] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { data: categories = [] } = useGetCategoriesQuery();
   const { data: budgets = [], isLoading: isBudgetsLoading } =
@@ -167,6 +169,22 @@ export const Budgets = () => {
   const selectedBudget = editingBudgetId
     ? budgetMap.get(editingBudgetId) ?? null
     : null;
+
+  useEffect(() => {
+    const action = searchParams.get("action");
+    if (!action) {
+      return;
+    }
+    if (action === "new") {
+      setEditingBudgetId(null);
+      setIsFormOpen(true);
+    } else if (action === "bulk") {
+      setIsBulkOpen(true);
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete("action");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const handleOpenCreate = () => {
     setEditingBudgetId(null);

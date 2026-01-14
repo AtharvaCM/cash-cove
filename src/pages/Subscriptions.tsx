@@ -166,6 +166,8 @@ export const Subscriptions = () => {
     }
   });
   const [searchParams, setSearchParams] = useSearchParams();
+  const actionParam = searchParams.get("action");
+  const formVisible = isFormOpen || actionParam === "new";
   const [isBulkPosting, setIsBulkPosting] = useState(false);
   const [bulkSummary, setBulkSummary] = useState<{
     total: number;
@@ -259,19 +261,14 @@ export const Subscriptions = () => {
     [rows, needsAccountOnly]
   );
 
-  useEffect(() => {
-    const action = searchParams.get("action");
-    if (!action) {
+  const clearActionParam = () => {
+    if (!actionParam) {
       return;
-    }
-    if (action === "new") {
-      setEditingId(null);
-      setIsFormOpen(true);
     }
     const next = new URLSearchParams(searchParams);
     next.delete("action");
     setSearchParams(next, { replace: true });
-  }, [searchParams, setSearchParams]);
+  };
 
   const handlePostPayment = useCallback(
     async (subscriptionId: string) => {
@@ -445,10 +442,11 @@ export const Subscriptions = () => {
   const handleCloseForm = () => {
     setIsFormOpen(false);
     setEditingId(null);
+    clearActionParam();
   };
 
   const formKey = `${selectedSubscription?.id ?? "new"}-${
-    isFormOpen ? "open" : "closed"
+    formVisible ? "open" : "closed"
   }`;
   const dueThisWeekLabel =
     dueThisWeekEligible.length > 0
@@ -474,7 +472,7 @@ export const Subscriptions = () => {
     <Stack gap="lg">
       <SubscriptionFormModal
         key={formKey}
-        opened={isFormOpen}
+        opened={formVisible}
         onClose={handleCloseForm}
         subscription={selectedSubscription}
         categories={categories}

@@ -21,6 +21,7 @@ import {
   Wallet,
   PiggyBank,
   Repeat,
+  BarChart3,
   Settings as SettingsIcon,
   RefreshCcw,
   LogOutIcon,
@@ -81,6 +82,7 @@ export const AppLayout = () => {
     "/budgets": "Budgets",
     "/funds": "Funds",
     "/subscriptions": "Subscriptions",
+    "/reports": "Reports",
     "/settings": "Settings",
   };
 
@@ -111,6 +113,7 @@ export const AppLayout = () => {
     { to: "/cashflow", label: "Cashflow", icon: <TrendingUp size={18} /> },
     { to: "/transactions", label: "Transactions", icon: <List size={18} /> },
     { to: "/subscriptions", label: "Subscriptions", icon: <Repeat size={18} /> },
+    { to: "/reports", label: "Reports", icon: <BarChart3 size={18} /> },
     { to: "/budgets", label: "Budgets", icon: <Wallet size={18} /> },
     { to: "/funds", label: "Funds", icon: <PiggyBank size={18} /> },
     { to: "/settings", label: "Settings", icon: <SettingsIcon size={18} /> },

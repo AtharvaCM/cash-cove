@@ -18,9 +18,11 @@ import dayjs from "dayjs";
 import {
   useAddTransactionMutation,
   useDeleteTransactionMutation,
+  useGetRulesQuery,
   useUpdateTransactionMutation,
 } from "../../features/api/apiSlice";
 import { formatINR } from "../../lib/format";
+import { applyRulesToTransaction } from "../../lib/rules";
 import type {
   Account,
   Category,
@@ -72,6 +74,7 @@ export const TransactionFormModal = ({
     useUpdateTransactionMutation();
   const [deleteTransaction, { isLoading: isDeleting }] =
     useDeleteTransactionMutation();
+  const { data: rules = [] } = useGetRulesQuery();
 
   const categoryMap = useMemo(
     () => new Map(categories.map((category) => [category.id, category.name])),
@@ -152,18 +155,28 @@ export const TransactionFormModal = ({
     }
 
     try {
+      const baseTags = form.tags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+      const ruled = applyRulesToTransaction(
+        {
+          notes: form.notes.trim() ? form.notes.trim() : null,
+          type: form.type,
+          category_id: form.category_id || null,
+          tags: baseTags,
+        },
+        rules
+      );
       const payload = {
         type: form.type,
         date: form.date,
         amount: Number(form.amount),
-        category_id: form.category_id || null,
+        category_id: ruled.category_id,
         payment_method_id: effectivePaymentMethodId || null,
         account_id: effectiveAccountId || null,
         notes: form.notes.trim() ? form.notes.trim() : null,
-        tags: form.tags
-          .split(",")
-          .map((tag) => tag.trim())
-          .filter(Boolean),
+        tags: ruled.tags,
         is_transfer: form.is_transfer,
         is_recurring: form.is_recurring,
       };

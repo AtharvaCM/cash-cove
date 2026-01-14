@@ -11,7 +11,7 @@ import {
   Textarea,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import dayjs from "dayjs";
 import {
@@ -135,29 +135,13 @@ export const SubscriptionFormModal = ({
     () => computeNextDueDate(form.billing_anchor, intervalMonths),
     [form.billing_anchor, intervalMonths]
   );
+  const nextDueValue = isNextDueManual ? form.next_due : autoNextDue;
   const nextDuePreview = useMemo(() => {
-    if (!form.next_due) {
+    if (!nextDueValue) {
       return null;
     }
-    return dayjs(form.next_due).format("DD MMM YYYY");
-  }, [form.next_due]);
-
-  useEffect(() => {
-    if (isNextDueManual) {
-      return;
-    }
-    if (!autoNextDue) {
-      setForm((prev) =>
-        prev.next_due ? { ...prev, next_due: "" } : prev
-      );
-      return;
-    }
-    setForm((prev) =>
-      prev.next_due === autoNextDue
-        ? prev
-        : { ...prev, next_due: autoNextDue }
-    );
-  }, [autoNextDue, isNextDueManual]);
+    return dayjs(nextDueValue).format("DD MMM YYYY");
+  }, [nextDueValue]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -173,7 +157,8 @@ export const SubscriptionFormModal = ({
       return;
     }
 
-    if (!form.next_due) {
+    const resolvedNextDue = isNextDueManual ? form.next_due : autoNextDue;
+    if (!resolvedNextDue) {
       setError("Choose the next due date.");
       return;
     }
@@ -189,8 +174,8 @@ export const SubscriptionFormModal = ({
         amount: Number(form.amount),
         currency: subscription?.currency ?? "INR",
         interval_months: intervalMonths,
-        billing_anchor: form.billing_anchor || form.next_due,
-        next_due: form.next_due,
+        billing_anchor: form.billing_anchor || resolvedNextDue,
+        next_due: resolvedNextDue,
         last_paid: subscription?.last_paid ?? null,
         status: form.status,
         category_id: form.category_id || null,
@@ -314,7 +299,7 @@ export const SubscriptionFormModal = ({
             />
             <DateInput
               label="Next due date"
-              value={form.next_due ? new Date(form.next_due) : null}
+              value={nextDueValue ? new Date(nextDueValue) : null}
               onChange={(value) => {
                 setForm((prev) => ({
                   ...prev,

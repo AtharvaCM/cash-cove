@@ -15,6 +15,7 @@ import { Settings } from "./pages/Settings";
 import { NotFound } from "./pages/NotFound";
 import { Transactions } from "./pages/Transactions";
 import { Subscriptions } from "./pages/Subscriptions";
+import { Reports } from "./pages/Reports";
 
 const App = () => {
   const dispatch = useAppDispatch();
@@ -65,6 +66,7 @@ const App = () => {
         <Route path="cashflow" element={<Cashflow />} />
         <Route path="transactions" element={<Transactions />} />
         <Route path="subscriptions" element={<Subscriptions />} />
+        <Route path="reports" element={<Reports />} />
         <Route path="budgets" element={<Budgets />} />
         <Route path="funds" element={<Funds />} />
         <Route path="settings" element={<Settings />} />

@@ -79,6 +79,31 @@ create table if not exists subscriptions (
   unique (user_id, name)
 );
 
+create table if not exists reconciliations (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid(),
+  account_id uuid not null references accounts(id) on delete cascade,
+  statement_date date not null,
+  statement_balance numeric(14, 2) not null,
+  adjusted boolean not null default false,
+  note text,
+  created_at timestamptz default now()
+);
+
+create table if not exists rules (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid(),
+  name text not null,
+  match_text text not null,
+  match_type text not null check (match_type in ('contains', 'starts_with', 'equals')),
+  transaction_type text not null default 'any' check (transaction_type in ('any', 'expense', 'income')),
+  category_id uuid references categories(id) on delete set null,
+  tag_names text[] not null default '{}',
+  is_active boolean not null default true,
+  priority integer not null default 100,
+  created_at timestamptz default now()
+);
+
 create table if not exists budgets (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid(),
@@ -129,6 +154,8 @@ alter table tags enable row level security;
 alter table transactions enable row level security;
 alter table transaction_tags enable row level security;
 alter table subscriptions enable row level security;
+alter table reconciliations enable row level security;
+alter table rules enable row level security;
 alter table budgets enable row level security;
 alter table funds enable row level security;
 alter table fund_contributions enable row level security;
@@ -152,6 +179,12 @@ create policy "Transaction tags are user-owned" on transaction_tags
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create policy "Subscriptions are user-owned" on subscriptions
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "Reconciliations are user-owned" on reconciliations
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "Rules are user-owned" on rules
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create policy "Budgets are user-owned" on budgets

@@ -84,3 +84,27 @@ export type Subscription = {
   payment_method_id: string | null;
   notes: string | null;
 };
+
+export type Reconciliation = {
+  id: string;
+  account_id: string;
+  statement_balance: number;
+  statement_date: string;
+  note: string | null;
+  adjusted: boolean;
+};
+
+export type RuleMatchType = "contains" | "starts_with" | "equals";
+export type RuleTransactionType = "any" | "expense" | "income";
+
+export type TransactionRule = {
+  id: string;
+  name: string;
+  match_text: string;
+  match_type: RuleMatchType;
+  transaction_type: RuleTransactionType;
+  category_id: string | null;
+  tag_names: string[];
+  is_active: boolean;
+  priority: number;
+};

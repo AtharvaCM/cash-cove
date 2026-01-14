@@ -3,6 +3,8 @@ import { CategoryManager } from "../components/settings/CategoryManager";
 import { AccountManager } from "../components/settings/AccountManager";
 import { PaymentManager } from "../components/settings/PaymentManager";
 import { TagManager } from "../components/settings/TagManager";
+import { ReconciliationManager } from "../components/settings/ReconciliationManager";
+import { RuleManager } from "../components/settings/RuleManager";
 
 export const Settings = () => (
   <Stack gap="lg">
@@ -12,5 +14,7 @@ export const Settings = () => (
       <PaymentManager />
       <TagManager />
     </SimpleGrid>
+    <ReconciliationManager />
+    <RuleManager />
   </Stack>
 );

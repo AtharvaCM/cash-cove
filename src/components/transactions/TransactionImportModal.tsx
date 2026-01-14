@@ -1,7 +1,7 @@
 import { Button, Divider, Group, Modal, Stack } from "@mantine/core";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import dayjs from "dayjs";
-import { useAddTransactionMutation } from "../../features/api/apiSlice";
+import { useAddTransactionMutation, useGetRulesQuery } from "../../features/api/apiSlice";
 import {
   buildDefaultMapping,
   buildParsedCsv,
@@ -26,6 +26,30 @@ type TransactionImportModalProps = {
   accounts: Account[];
 };
 
+type ImportPreset = {
+  mappingOverrides: Partial<CsvMapping>;
+  defaults: {
+    category: string;
+    payment: string;
+    account: string;
+    type: "expense" | "income";
+    recurring: boolean;
+  };
+};
+
+const loadPresetFromStorage = (): ImportPreset | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  try {
+    const raw = localStorage.getItem("cashcove:importPreset");
+    if (!raw) return null;
+    return JSON.parse(raw) as ImportPreset;
+  } catch {
+    return null;
+  }
+};
+
 export const TransactionImportModal = ({
   opened,
   onClose,
@@ -33,20 +57,32 @@ export const TransactionImportModal = ({
   paymentMethods,
   accounts,
 }: TransactionImportModalProps) => {
+  const [preset, setPreset] = useState<ImportPreset | null>(() =>
+    loadPresetFromStorage()
+  );
+
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importRaw, setImportRaw] = useState("");
   const [importHasHeader, setImportHasHeader] = useState(true);
   const [importDelimiter, setImportDelimiter] = useState("auto");
   const [importDefaultType, setImportDefaultType] = useState<"expense" | "income">(
-    "expense"
+    () => preset?.defaults.type ?? "expense"
   );
-  const [importDefaultCategory, setImportDefaultCategory] = useState("");
-  const [importDefaultPayment, setImportDefaultPayment] = useState("");
-  const [importDefaultAccount, setImportDefaultAccount] = useState("");
-  const [importRecurring, setImportRecurring] = useState(false);
+  const [importDefaultCategory, setImportDefaultCategory] = useState(
+    () => preset?.defaults.category ?? ""
+  );
+  const [importDefaultPayment, setImportDefaultPayment] = useState(
+    () => preset?.defaults.payment ?? ""
+  );
+  const [importDefaultAccount, setImportDefaultAccount] = useState(
+    () => preset?.defaults.account ?? ""
+  );
+  const [importRecurring, setImportRecurring] = useState(
+    () => preset?.defaults.recurring ?? false
+  );
   const [importMappingOverrides, setImportMappingOverrides] = useState<
     Partial<CsvMapping>
-  >({});
+  >(() => preset?.mappingOverrides ?? {});
   const [importError, setImportError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<{
     success: number;
@@ -61,6 +97,7 @@ export const TransactionImportModal = ({
   const [hasExportedErrors, setHasExportedErrors] = useState(false);
 
   const [addTransaction] = useAddTransactionMutation();
+  const { data: rules = [] } = useGetRulesQuery();
 
   const categoryMap = useMemo(
     () => new Map(categories.map((category) => [category.id, category.name])),
@@ -158,6 +195,7 @@ export const TransactionImportModal = ({
           ),
           accountById: new Map(accounts.map((acc) => [acc.id, acc.name])),
         },
+        rules,
       }),
     [
       parsedCsv,
@@ -173,6 +211,7 @@ export const TransactionImportModal = ({
       paymentNameMap,
       paymentMap,
       accounts,
+      rules,
     ]
   );
 
@@ -180,31 +219,6 @@ export const TransactionImportModal = ({
     setImportError(null);
     setImportResult(null);
     setFailedRows([]);
-  };
-
-  const loadPreset = () => {
-    try {
-      const raw = localStorage.getItem("cashcove:importPreset");
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as {
-        mappingOverrides: Partial<CsvMapping>;
-        defaults: {
-          category: string;
-          payment: string;
-          account: string;
-          type: "expense" | "income";
-          recurring: boolean;
-        };
-      };
-      setImportMappingOverrides(parsed.mappingOverrides ?? {});
-      setImportDefaultCategory(parsed.defaults.category ?? "");
-      setImportDefaultPayment(parsed.defaults.payment ?? "");
-      setImportDefaultAccount(parsed.defaults.account ?? "");
-      setImportDefaultType(parsed.defaults.type ?? "expense");
-      setImportRecurring(parsed.defaults.recurring ?? false);
-    } catch {
-      // ignore preset load errors
-    }
   };
 
   const savePreset = () => {
@@ -220,6 +234,7 @@ export const TransactionImportModal = ({
         },
       };
       localStorage.setItem("cashcove:importPreset", JSON.stringify(payload));
+      setPreset(payload);
     } catch {
       // ignore save errors
     }
@@ -243,12 +258,12 @@ export const TransactionImportModal = ({
     setImportRaw("");
     setImportHasHeader(true);
     setImportDelimiter("auto");
-    setImportDefaultType("expense");
-    setImportDefaultCategory("");
-    setImportDefaultPayment("");
-    setImportDefaultAccount("");
-    setImportRecurring(false);
-    resetMappingOverrides();
+    setImportDefaultType(preset?.defaults.type ?? "expense");
+    setImportDefaultCategory(preset?.defaults.category ?? "");
+    setImportDefaultPayment(preset?.defaults.payment ?? "");
+    setImportDefaultAccount(preset?.defaults.account ?? "");
+    setImportRecurring(preset?.defaults.recurring ?? false);
+    setImportMappingOverrides(preset?.mappingOverrides ?? {});
     clearImportFeedback();
     resetExportState();
     setImportProgress(null);
@@ -259,11 +274,6 @@ export const TransactionImportModal = ({
     onClose();
   };
 
-  useEffect(() => {
-    if (opened) {
-      loadPreset();
-    }
-  }, [opened]);
 
   const handleImportFileChange = (file: File | null) => {
     setImportFile(file);

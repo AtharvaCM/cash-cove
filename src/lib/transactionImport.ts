@@ -1,5 +1,7 @@
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
+import type { TransactionRule } from "../types/finance";
+import { applyRulesToTransaction } from "./rules";
 
 dayjs.extend(customParseFormat);
 
@@ -432,12 +434,14 @@ export const parseImportRows = ({
   hasHeader,
   defaults,
   lookups,
+  rules = [],
 }: {
   parsedCsv: ParsedCsv;
   mapping: CsvMapping;
   hasHeader: boolean;
   defaults: ImportDefaults;
   lookups: ImportLookups;
+  rules?: TransactionRule[];
 }): ParsedImportResult => {
   const validRows: ParsedImportRow[] = [];
   const invalidRows: InvalidImportRow[] = [];
@@ -596,7 +600,7 @@ export const parseImportRows = ({
     }
 
     const notes = getCell(mapping.notes);
-    const tags = mapping.tags ? splitTags(getCell(mapping.tags)) : [];
+    let tags = mapping.tags ? splitTags(getCell(mapping.tags)) : [];
 
     if (errors.length > 0 || !type || !date || !amountValue) {
       invalidRows.push({
@@ -610,6 +614,24 @@ export const parseImportRows = ({
     if (rowWarnings.length > 0) {
       warnings.push(`Row ${rowNumber}: ${rowWarnings.join(" ")}`);
     }
+
+    const ruleResult = applyRulesToTransaction(
+      {
+        notes: notes.trim() ? notes.trim() : null,
+        type,
+        category_id: categoryId,
+        tags,
+      },
+      rules
+    );
+
+    if (ruleResult.category_id && ruleResult.category_id !== categoryId) {
+      categoryId = ruleResult.category_id;
+      categoryLabel =
+        lookups.categoryById.get(ruleResult.category_id) ?? categoryLabel;
+    }
+
+    tags = ruleResult.tags;
 
     validRows.push({
       rowNumber,

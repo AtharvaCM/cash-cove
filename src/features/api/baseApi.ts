@@ -14,6 +14,8 @@ export const apiSlice = createApi({
     "Funds",
     "FundContributions",
     "Subscriptions",
+    "Reconciliations",
+    "Rules",
   ],
   endpoints: () => ({}),
 });

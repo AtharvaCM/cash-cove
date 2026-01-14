@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import { apiSlice } from "./baseApi";
 import { supabase } from "../../lib/supabaseClient";
 import type { Tag, Transaction } from "../../types/finance";
-import type { DeleteByIdInput, MonthArgs, TagsArgs } from "./types";
+import type { DeleteByIdInput, MonthArgs, RangeArgs, TagsArgs } from "./types";
 
 type TransactionRow = {
   id: string;
@@ -68,6 +68,34 @@ export const transactionsTestHelpers = {
   applyAccountDelta,
 };
 
+const mapTransactionRows = async (rows: TransactionRow[]) =>
+  Promise.all(
+    rows.map(async (row) => {
+      const tags = row.transaction_tags
+        ? row.transaction_tags.flatMap((link) => {
+            if (!link.tags) {
+              return [];
+            }
+            return Array.isArray(link.tags) ? link.tags : [link.tags];
+          })
+        : [];
+      return {
+        id: row.id,
+        type: row.type,
+        date: row.date,
+        amount: Number(row.amount),
+        category_id: row.category_id,
+        payment_method_id: row.payment_method_id,
+        account_id: row.account_id,
+        notes: row.notes_enc ?? null,
+        notes_enc: row.notes_enc,
+        is_transfer: Boolean(row.is_transfer),
+        is_recurring: row.is_recurring,
+        tags,
+      } as Transaction;
+    })
+  );
+
 export const transactionsApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getTransactions: builder.query<Transaction[], MonthArgs>({
@@ -91,34 +119,37 @@ export const transactionsApi = apiSlice.injectEndpoints({
 
         const rows = (data ?? []) as unknown as TransactionRow[];
 
-        const mapped = await Promise.all(
-          rows.map(async (row) => {
-            const tags = row.transaction_tags
-              ? row.transaction_tags.flatMap((link) => {
-                  if (!link.tags) {
-                    return [];
-                  }
-                  return Array.isArray(link.tags) ? link.tags : [link.tags];
-                })
-              : [];
-            return {
-              id: row.id,
-              type: row.type,
-              date: row.date,
-              amount: Number(row.amount),
-              category_id: row.category_id,
-              payment_method_id: row.payment_method_id,
-              account_id: row.account_id,
-              notes: row.notes_enc ?? null,
-              notes_enc: row.notes_enc,
-              is_transfer: Boolean(row.is_transfer),
-              is_recurring: row.is_recurring,
-              tags,
-            } as Transaction;
-          })
-        );
+        return { data: await mapTransactionRows(rows) };
+      },
+      providesTags: (result) =>
+        result
+          ? [
+              "Transactions",
+              ...result.map((transaction) => ({
+                type: "Transactions" as const,
+                id: transaction.id,
+              })),
+            ]
+          : ["Transactions"],
+    }),
+    getTransactionsByRange: builder.query<Transaction[], RangeArgs>({
+      async queryFn({ start, end }) {
+        const { data, error } = await supabase
+          .from("transactions")
+          .select(
+            "id, type, date, amount, category_id, payment_method_id, account_id, notes_enc, is_recurring, is_transfer, transaction_tags(tags(id, name))"
+          )
+          .gte("date", start)
+          .lte("date", end)
+          .order("date", { ascending: false })
+          .order("created_at", { ascending: false });
 
-        return { data: mapped };
+        if (error) {
+          return { error: { message: error.message } };
+        }
+
+        const rows = (data ?? []) as unknown as TransactionRow[];
+        return { data: await mapTransactionRows(rows) };
       },
       providesTags: (result) =>
         result
@@ -420,6 +451,7 @@ export const transactionsApi = apiSlice.injectEndpoints({
 
 export const {
   useGetTransactionsQuery,
+  useGetTransactionsByRangeQuery,
   useAddTransactionMutation,
   useUpdateTransactionMutation,
   useDeleteTransactionMutation,

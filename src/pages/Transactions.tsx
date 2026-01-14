@@ -1,7 +1,7 @@
 import { Button, Group, Paper, Stack, Text, Title } from "@mantine/core";
 import { MonthPickerInput } from "@mantine/dates";
 import { Upload, Plus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import dayjs from "dayjs";
 import {
   useGetAccountsQuery,
@@ -25,6 +25,9 @@ export const Transactions = () => {
     string | null
   >(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const actionParam = searchParams.get("action");
+  const formVisible = isFormOpen || actionParam === "new";
+  const importVisible = isImportOpen || actionParam === "import";
 
   const { data: categories = [] } = useGetCategoriesQuery();
   const { data: paymentMethods = [] } = useGetPaymentMethodsQuery();
@@ -111,21 +114,14 @@ export const Transactions = () => {
     return transactions.find((tx) => tx.id === editingTransactionId) ?? null;
   }, [transactions, editingTransactionId]);
 
-  useEffect(() => {
-    const action = searchParams.get("action");
-    if (!action) {
+  const clearActionParam = () => {
+    if (!actionParam) {
       return;
-    }
-    if (action === "new") {
-      setEditingTransactionId(null);
-      setIsFormOpen(true);
-    } else if (action === "import") {
-      setIsImportOpen(true);
     }
     const next = new URLSearchParams(searchParams);
     next.delete("action");
     setSearchParams(next, { replace: true });
-  }, [searchParams, setSearchParams]);
+  };
 
   const handleOpenCreate = () => {
     setEditingTransactionId(null);
@@ -140,18 +136,24 @@ export const Transactions = () => {
   const handleCloseForm = () => {
     setIsFormOpen(false);
     setEditingTransactionId(null);
+    clearActionParam();
+  };
+
+  const handleCloseImport = () => {
+    setIsImportOpen(false);
+    clearActionParam();
   };
 
   const formKey = `${selectedTransaction?.id ?? "new"}-${
-    isFormOpen ? "open" : "closed"
+    formVisible ? "open" : "closed"
   }`;
-  const importKey = `import-${isImportOpen ? "open" : "closed"}`;
+  const importKey = `import-${importVisible ? "open" : "closed"}`;
 
   return (
     <Stack gap="lg">
       <TransactionFormModal
         key={formKey}
-        opened={isFormOpen}
+        opened={formVisible}
         onClose={handleCloseForm}
         transaction={selectedTransaction}
         categories={categories}
@@ -160,8 +162,8 @@ export const Transactions = () => {
       />
       <TransactionImportModal
         key={importKey}
-        opened={isImportOpen}
-        onClose={() => setIsImportOpen(false)}
+        opened={importVisible}
+        onClose={handleCloseImport}
         categories={categories}
         paymentMethods={paymentMethods}
         accounts={accounts}

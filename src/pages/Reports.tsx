@@ -30,6 +30,7 @@ const INITIAL_RANGE = getDefaultReportRange();
 export const Reports = () => {
   const [start, setStart] = useState<Date | null>(INITIAL_RANGE.start);
   const [end, setEnd] = useState<Date | null>(INITIAL_RANGE.end);
+  const [trendMode, setTrendMode] = useState<"top" | "all">("top");
   const { startDate, endDate, spanDays } = normalizeReportRange(start, end);
   const prevStart = startDate
     ? dayjs(startDate).subtract(spanDays || 0, "day").format("YYYY-MM-DD")
@@ -99,7 +100,8 @@ export const Reports = () => {
     currentTransactions,
     categoryMap,
     startDate,
-    endDate
+    endDate,
+    trendMode
   );
 
   const rangeLabel = startDate && endDate
@@ -164,7 +166,12 @@ export const Reports = () => {
 
       <ChartsSection pieData={pieData} dailyData={dailyData} />
 
-      <CategoryTrendChart data={trendData} series={trendSeries} />
+      <CategoryTrendChart
+        data={trendData}
+        series={trendSeries}
+        mode={trendMode}
+        onModeChange={setTrendMode}
+      />
 
       {isLoading ? (
         <Text size="sm" c="dimmed">

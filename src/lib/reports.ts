@@ -251,7 +251,8 @@ export const buildCategoryTrendData = (
   transactions: Transaction[],
   categoryMap: Map<string, string>,
   startDate: string,
-  endDate: string
+  endDate: string,
+  mode: "top" | "all" = "top"
 ): { data: Array<Record<string, number | string>>; series: CategoryTrendSeries[] } => {
   if (!startDate || !endDate) {
     return { data: [], series: [] };
@@ -281,12 +282,13 @@ export const buildCategoryTrendData = (
   );
   const top = ranked.slice(0, 5);
   const topKeys = new Set(top.map(([key]) => key));
-  const series: CategoryTrendSeries[] = top.map(([key]) => ({
+  const seriesSource = mode === "all" ? ranked : top;
+  const series: CategoryTrendSeries[] = seriesSource.map(([key]) => ({
     key,
     label: resolveCategoryLabel(key, categoryMap),
   }));
 
-  if (ranked.length > top.length) {
+  if (mode === "top" && ranked.length > top.length) {
     series.push({ key: "other", label: "Other" });
   }
 
@@ -307,7 +309,8 @@ export const buildCategoryTrendData = (
       const row = rowMap.get(monthKey);
       if (!row) return;
       const rawKey = tx.category_id ?? "uncategorized";
-      const bucketKey = topKeys.has(rawKey) ? rawKey : "other";
+      const bucketKey =
+        mode === "top" ? (topKeys.has(rawKey) ? rawKey : "other") : rawKey;
       row[bucketKey] = Number(row[bucketKey] ?? 0) + tx.amount;
     });
 

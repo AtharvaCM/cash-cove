@@ -1,4 +1,4 @@
-import { Paper, Stack, Text, Title } from "@mantine/core";
+import { Group, Paper, SegmentedControl, Stack, Text, Title } from "@mantine/core";
 import {
   Bar,
   BarChart,
@@ -17,6 +17,8 @@ import { EmptyState } from "../common/EmptyState";
 type CategoryTrendChartProps = {
   data?: Array<Record<string, number | string>>;
   series?: CategoryTrendSeries[];
+  mode?: "top" | "all";
+  onModeChange?: (mode: "top" | "all") => void;
 };
 
 const hasTrendValues = (
@@ -30,16 +32,33 @@ const hasTrendValues = (
 export const CategoryTrendChart = ({
   data = [],
   series = [],
+  mode = "top",
+  onModeChange,
 }: CategoryTrendChartProps) => {
   const chartReady =
     series.length > 0 && data.length > 0 && hasTrendValues(data, series);
   return (
     <Paper withBorder shadow="sm" radius="lg" p="md">
       <Stack gap="xs" mb="sm">
-        <Title order={4}>Category trends</Title>
-        <Text size="sm" c="dimmed">
-          Monthly spend split across top categories.
-        </Text>
+        <Group justify="space-between" align="center" wrap="wrap">
+          <Stack gap={2}>
+            <Title order={4}>Category trends</Title>
+            <Text size="sm" c="dimmed">
+              Monthly spend split across {mode === "top" ? "top" : "all"} categories.
+            </Text>
+          </Stack>
+          {onModeChange ? (
+            <SegmentedControl
+              size="xs"
+              value={mode}
+              onChange={(value) => onModeChange(value as "top" | "all")}
+              data={[
+                { label: "Top categories", value: "top" },
+                { label: "All categories", value: "all" },
+              ]}
+            />
+          ) : null}
+        </Group>
       </Stack>
       {chartReady ? (
         <ResponsiveContainer width="100%" height={260}>

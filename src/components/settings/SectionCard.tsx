@@ -15,15 +15,15 @@ export const SectionCard = ({
   children,
 }: SectionCardProps) => (
   <Paper withBorder shadow="sm" radius="lg" p="md">
-    <Group justify="space-between" align="center" mb="sm">
-      <Stack gap={2}>
+    <Group justify="space-between" align="flex-start" wrap="nowrap" mb="sm">
+      <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>
         <Title order={4}>{title}</Title>
         <Text size="sm" c="dimmed">
           {description}
         </Text>
       </Stack>
       {badge ? (
-        <Badge variant="light" color="blue">
+        <Badge variant="light" color="blue" style={{ alignSelf: "flex-start" }}>
           {badge}
         </Badge>
       ) : null}

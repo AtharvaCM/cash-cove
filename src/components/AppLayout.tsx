@@ -18,7 +18,6 @@ import { useMediaQuery } from "@mantine/hooks";
 import dayjs from "dayjs";
 import {
   LayoutGrid,
-  TrendingUp,
   List,
   Wallet,
   PiggyBank,
@@ -139,7 +138,6 @@ export const AppLayout = () => {
 
   const navItems = [
     { to: "/", label: "Overview", icon: <LayoutGrid size={18} /> },
-    { to: "/cashflow", label: "Cashflow", icon: <TrendingUp size={18} /> },
     { to: "/transactions", label: "Transactions", icon: <List size={18} /> },
     {
       to: "/subscriptions",
@@ -159,9 +157,15 @@ export const AppLayout = () => {
     { to: "/settings", label: "Settings", icon: <SettingsIcon size={20} /> },
   ];
 
-  const isActiveRoute = (path: string) =>
-    location.pathname === path ||
-    (path !== "/" && location.pathname.startsWith(path));
+  const isActiveRoute = (path: string) => {
+    if (path === "/reports" && location.pathname.startsWith("/cashflow")) {
+      return true;
+    }
+    return (
+      location.pathname === path ||
+      (path !== "/" && location.pathname.startsWith(path))
+    );
+  };
 
   return (
     <div
@@ -408,6 +412,16 @@ export const AppLayout = () => {
             </RouterNavLink>
           ))}
         </nav>
+      ) : null}
+      {isMobile ? (
+        <button
+          type="button"
+          className="mobile-quick-add"
+          onClick={() => setQuickAddOpen(true)}
+          aria-label="Quick add"
+        >
+          <Plus size={24} strokeWidth={2} />
+        </button>
       ) : null}
     </div>
   );

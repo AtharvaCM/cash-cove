@@ -1,10 +1,10 @@
 import {
-  ActionIcon,
   Badge,
   Button,
   Group,
   Modal,
   Paper,
+  Popover,
   SimpleGrid,
   Switch,
   Select,
@@ -14,6 +14,7 @@ import {
   Title,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
+import { useMediaQuery } from "@mantine/hooks";
 import { Plus, Save, Trash2, Upload } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import dayjs from "dayjs";
@@ -87,6 +88,7 @@ const buildFiltersKey = (userId?: string | null) =>
 export const Transactions = () => {
   const userId = useAppSelector((state) => state.auth.user?.id ?? null);
   const { month } = useAppMonth();
+  const isMobile = useMediaQuery("(max-width: 900px)");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<
@@ -102,6 +104,7 @@ export const Transactions = () => {
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [saveName, setSaveName] = useState("");
   const [selectedSavedId, setSelectedSavedId] = useState<string | null>(null);
+  const [savedPopoverOpen, setSavedPopoverOpen] = useState(false);
   const [savedFilters, setSavedFilters] = useState<
     SavedFilter<TransactionFilters>[]
   >(() => loadSavedFilters(buildFiltersKey(userId)));
@@ -721,9 +724,11 @@ export const Transactions = () => {
             >
               Import CSV
             </Button>
-            <Button leftSection={<Plus size={16} strokeWidth={2} />} onClick={handleOpenCreate}>
-              Add transaction
-            </Button>
+            {!isMobile ? (
+              <Button leftSection={<Plus size={16} strokeWidth={2} />} onClick={handleOpenCreate}>
+                Add transaction
+              </Button>
+            ) : null}
           </Group>
         </Group>
         {selectedIds.length > 0 ? (
@@ -745,7 +750,8 @@ export const Transactions = () => {
         ) : null}
         <Stack gap="xs" mb="md">
           <Paper withBorder radius="md" p="sm">
-            <SimpleGrid cols={{ base: 1, sm: 2, md: 3, xl: 6 }} spacing="sm">
+            <Stack gap="sm">
+              <SimpleGrid cols={{ base: 1, sm: 2, md: 3, xl: 6 }} spacing="sm">
               <TextInput
                 label="Search"
                 value={search}
@@ -826,41 +832,70 @@ export const Transactions = () => {
                   style={{ flex: 1 }}
                 />
               </Group>
-              <Group gap="xs" align="flex-end" wrap="nowrap" style={{ minWidth: 0 }}>
-                <Select
-                  label="Saved"
-                  data={savedFilterOptions}
-                  value={selectedSavedId}
-                  onChange={handleApplySavedFilter}
-                  placeholder="Choose"
-                  clearable
-                  size="xs"
-                  styles={{ input: { minWidth: 0 } }}
-                  style={{ flex: 1 }}
-                />
-                <ActionIcon
-                  variant="light"
-                  color="blue"
-                  size="sm"
-                  onClick={() => setSaveModalOpen(true)}
-                  aria-label="Save current filters"
-                >
-                  <Save size={14} strokeWidth={2} />
-                </ActionIcon>
-                <ActionIcon
-                  variant="light"
-                  color="red"
-                  size="sm"
-                  onClick={handleDeleteSavedFilter}
-                  disabled={!selectedSavedId}
-                  aria-label="Delete saved filter"
-                >
-                  <Trash2 size={14} strokeWidth={2} />
-                </ActionIcon>
-              </Group>
+              <Popover
+                opened={savedPopoverOpen}
+                onChange={setSavedPopoverOpen}
+                position="bottom-end"
+                withArrow
+                shadow="md"
+              >
+                <Popover.Target>
+                  <Button
+                    variant="light"
+                    size="xs"
+                    leftSection={<Save size={14} strokeWidth={2} />}
+                    style={{ width: "100%" }}
+                  >
+                    Saved filters
+                  </Button>
+                </Popover.Target>
+                <Popover.Dropdown>
+                  <Stack gap="xs">
+                    <Select
+                      label="Saved filters"
+                      data={savedFilterOptions}
+                      value={selectedSavedId}
+                      onChange={(value) => {
+                        handleApplySavedFilter(value);
+                        setSavedPopoverOpen(false);
+                      }}
+                      placeholder="Choose"
+                      clearable
+                      size="xs"
+                    />
+                    <Group grow>
+                      <Button
+                        variant="light"
+                        size="xs"
+                        leftSection={<Save size={14} strokeWidth={2} />}
+                        onClick={() => {
+                          setSavedPopoverOpen(false);
+                          setSaveModalOpen(true);
+                        }}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        variant="light"
+                        size="xs"
+                        color="red"
+                        leftSection={<Trash2 size={14} strokeWidth={2} />}
+                        onClick={() => {
+                          handleDeleteSavedFilter();
+                          setSavedPopoverOpen(false);
+                        }}
+                        disabled={!selectedSavedId}
+                      >
+                        Delete
+                      </Button>
+                    </Group>
+                  </Stack>
+                </Popover.Dropdown>
+              </Popover>
             </SimpleGrid>
+              <ActiveFilterChips items={activeChips} />
+            </Stack>
           </Paper>
-          <ActiveFilterChips items={activeChips} />
         </Stack>
         <DatatrixTable
           rows={rows}

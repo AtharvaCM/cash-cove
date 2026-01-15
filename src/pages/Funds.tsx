@@ -59,6 +59,11 @@ export const Funds = () => {
     () => accounts.reduce((sum, account) => sum + (account.current_balance ?? 0), 0),
     [accounts]
   );
+  const allocatedTotal = useMemo(
+    () => funds.reduce((sum, fund) => sum + fund.current_amount, 0),
+    [funds]
+  );
+  const unallocatedCash = cashOnHand - allocatedTotal;
 
   const contributionMap = useMemo(
     () => new Map(contributions.map((item) => [item.id, item])),
@@ -132,6 +137,7 @@ export const Funds = () => {
         opened={isContributionModalOpen}
         onClose={handleCloseContribution}
         funds={funds}
+        unallocatedCash={unallocatedCash}
         contribution={selectedContribution}
       />
 

@@ -29,6 +29,7 @@ type ContributionModalProps = {
   opened: boolean;
   onClose: () => void;
   funds: Fund[];
+  unallocatedCash: number;
   contribution?: FundContribution | null;
 };
 
@@ -47,6 +48,7 @@ export const ContributionModal = ({
   opened,
   onClose,
   funds,
+  unallocatedCash,
   contribution,
 }: ContributionModalProps) => {
   const [form, setForm] = useState(() => buildInitialForm(contribution, funds));
@@ -69,6 +71,10 @@ export const ContributionModal = ({
     () => new Map(funds.map((fund) => [fund.id, fund])),
     [funds]
   );
+  const availableLabel =
+    unallocatedCash >= 0
+      ? `Unallocated cash ${formatINR(unallocatedCash)}`
+      : `Over-allocated by ${formatINR(Math.abs(unallocatedCash))}`;
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -100,6 +106,13 @@ export const ContributionModal = ({
     }
 
     if (contribution) {
+      const allocationDelta = signedAmount - contribution.amount;
+      if (allocationDelta > 0 && allocationDelta - unallocatedCash > 0.01) {
+        setError(
+          `Not enough unallocated cash. ${availableLabel}.`
+        );
+        return;
+      }
       if (contribution.fund_id === form.fund_id) {
         const nextCurrent =
           selectedFund.current_amount + (signedAmount - contribution.amount);
@@ -126,6 +139,12 @@ export const ContributionModal = ({
         }
       }
     } else {
+      if (signedAmount > 0 && signedAmount - unallocatedCash > 0.01) {
+        setError(
+          `Not enough unallocated cash. ${availableLabel}.`
+        );
+        return;
+      }
       const nextCurrent = selectedFund.current_amount + signedAmount;
       if (nextCurrent < 0) {
         setError("This contribution would overdraw the fund.");
@@ -251,6 +270,9 @@ export const ContributionModal = ({
               required
             />
           </SimpleGrid>
+          <Text size="xs" c={unallocatedCash >= 0 ? "dimmed" : "red.6"}>
+            {availableLabel}
+          </Text>
           <TextInput
             label="Note"
             value={form.note}

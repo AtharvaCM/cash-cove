@@ -1,10 +1,10 @@
 import {
-  ActionIcon,
   Badge,
   Button,
   Group,
   Modal,
   Paper,
+  Popover,
   Select,
   SimpleGrid,
   Stack,
@@ -14,6 +14,7 @@ import {
   Title,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
+import { useMediaQuery } from "@mantine/hooks";
 import { CheckCircle2, Plus, Save, Trash2 } from "lucide-react";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -83,27 +84,42 @@ const SubscriptionNextDueCell = (
   if (!raw) {
     return <Text size="sm">-</Text>;
   }
-  const daysAway = dayjs(raw).diff(dayjs(), "day");
+  const dueDate = dayjs(raw);
+  const daysAway = dueDate.diff(dayjs(), "day");
   const isOverdue = daysAway < 0;
-  let label = `Due in ${daysAway}d`;
+  const isToday = daysAway === 0;
+  const isSoon = daysAway > 0 && daysAway <= 7;
+  let statusLabel = "Upcoming";
+  let detailLabel = `In ${daysAway} days`;
+
   if (isOverdue) {
-    label = `Overdue by ${Math.abs(daysAway)}d`;
-  } else if (daysAway === 0) {
-    label = "Due today";
+    statusLabel = "Overdue";
+    detailLabel = `${Math.abs(daysAway)} days late`;
+  } else if (isToday) {
+    statusLabel = "Due today";
+    detailLabel = "Today";
+  } else if (isSoon) {
+    statusLabel = "Due soon";
+    detailLabel = `In ${daysAway} days`;
   }
 
   let tone = "gray";
   if (isOverdue) {
     tone = "red";
-  } else if (daysAway <= 7) {
+  } else if (isSoon || isToday) {
     tone = "orange";
   }
   return (
     <Stack gap={4}>
       <Text fw={600}>{params.data?.next_due}</Text>
-      <Badge variant="light" color={tone} radius="sm">
-        {label}
-      </Badge>
+      <Group gap={6} wrap="wrap">
+        <Badge variant="light" color={tone} radius="sm">
+          {statusLabel}
+        </Badge>
+        <Text size="xs" c="dimmed">
+          {detailLabel}
+        </Text>
+      </Group>
     </Stack>
   );
 };
@@ -167,6 +183,7 @@ const SubscriptionActionsCell = (
 
 export const Subscriptions = () => {
   const userId = useAppSelector((state) => state.auth.user?.id ?? null);
+  const isMobile = useMediaQuery("(max-width: 900px)");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [postingId, setPostingId] = useState<string | null>(null);
@@ -206,6 +223,7 @@ export const Subscriptions = () => {
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [saveName, setSaveName] = useState("");
   const [selectedSavedId, setSelectedSavedId] = useState<string | null>(null);
+  const [savedPopoverOpen, setSavedPopoverOpen] = useState(false);
   const [savedFilters, setSavedFilters] = useState<
     SavedFilter<SubscriptionFilters>[]
   >(() => loadSavedFilters(buildFiltersKey(userId)));
@@ -795,17 +813,20 @@ export const Subscriptions = () => {
                 </Text>
               ) : null}
             </Stack>
-            <Button
-              leftSection={<Plus size={16} strokeWidth={2} />}
-              onClick={handleOpenCreate}
-            >
-              Add subscription
-            </Button>
+            {!isMobile ? (
+              <Button
+                leftSection={<Plus size={16} strokeWidth={2} />}
+                onClick={handleOpenCreate}
+              >
+                Add subscription
+              </Button>
+            ) : null}
           </Group>
         </Group>
         <Stack gap="sm" mb="md">
           <Paper withBorder radius="md" p="sm">
-            <SimpleGrid cols={{ base: 1, sm: 2, md: 3, xl: 6 }} spacing="sm">
+            <Stack gap="sm">
+              <SimpleGrid cols={{ base: 1, sm: 2, md: 3, xl: 6 }} spacing="sm">
               <TextInput
                 label="Search"
                 value={search}
@@ -887,41 +908,70 @@ export const Subscriptions = () => {
                   style={{ flex: 1 }}
                 />
               </Group>
-              <Group gap="xs" align="flex-end" wrap="nowrap" style={{ minWidth: 0 }}>
-                <Select
-                  label="Saved"
-                  data={savedFilterOptions}
-                  value={selectedSavedId}
-                  onChange={handleApplySavedFilter}
-                  placeholder="Choose"
-                  clearable
-                  size="xs"
-                  styles={{ input: { minWidth: 0 } }}
-                  style={{ flex: 1 }}
-                />
-                <ActionIcon
-                  variant="light"
-                  color="blue"
-                  size="sm"
-                  onClick={() => setSaveModalOpen(true)}
-                  aria-label="Save current filters"
-                >
-                  <Save size={14} strokeWidth={2} />
-                </ActionIcon>
-                <ActionIcon
-                  variant="light"
-                  color="red"
-                  size="sm"
-                  onClick={handleDeleteSavedFilter}
-                  disabled={!selectedSavedId}
-                  aria-label="Delete saved filter"
-                >
-                  <Trash2 size={14} strokeWidth={2} />
-                </ActionIcon>
-              </Group>
+              <Popover
+                opened={savedPopoverOpen}
+                onChange={setSavedPopoverOpen}
+                position="bottom-end"
+                withArrow
+                shadow="md"
+              >
+                <Popover.Target>
+                  <Button
+                    variant="light"
+                    size="xs"
+                    leftSection={<Save size={14} strokeWidth={2} />}
+                    style={{ width: "100%" }}
+                  >
+                    Saved filters
+                  </Button>
+                </Popover.Target>
+                <Popover.Dropdown>
+                  <Stack gap="xs">
+                    <Select
+                      label="Saved filters"
+                      data={savedFilterOptions}
+                      value={selectedSavedId}
+                      onChange={(value) => {
+                        handleApplySavedFilter(value);
+                        setSavedPopoverOpen(false);
+                      }}
+                      placeholder="Choose"
+                      clearable
+                      size="xs"
+                    />
+                    <Group grow>
+                      <Button
+                        variant="light"
+                        size="xs"
+                        leftSection={<Save size={14} strokeWidth={2} />}
+                        onClick={() => {
+                          setSavedPopoverOpen(false);
+                          setSaveModalOpen(true);
+                        }}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        variant="light"
+                        size="xs"
+                        color="red"
+                        leftSection={<Trash2 size={14} strokeWidth={2} />}
+                        onClick={() => {
+                          handleDeleteSavedFilter();
+                          setSavedPopoverOpen(false);
+                        }}
+                        disabled={!selectedSavedId}
+                      >
+                        Delete
+                      </Button>
+                    </Group>
+                  </Stack>
+                </Popover.Dropdown>
+              </Popover>
             </SimpleGrid>
+              <ActiveFilterChips items={activeChips} />
+            </Stack>
           </Paper>
-          <ActiveFilterChips items={activeChips} />
         </Stack>
         <DatatrixTable
           rows={rows}

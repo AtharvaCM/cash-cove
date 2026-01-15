@@ -1,5 +1,6 @@
 import {
   Alert,
+  Accordion,
   Button,
   Group,
   Modal,
@@ -142,6 +143,10 @@ export const SubscriptionFormModal = ({
     }
     return dayjs(nextDueValue).format("DD MMM YYYY");
   }, [nextDueValue]);
+  const shouldShowAdvanced =
+    Boolean(form.notes.trim()) ||
+    Boolean(form.payment_method_id) ||
+    form.status !== "active";
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -343,43 +348,59 @@ export const SubscriptionFormModal = ({
               clearable
             />
           </SimpleGrid>
-          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
-            <Select
-              label="Payment method"
-              data={paymentOptions}
-              value={form.payment_method_id}
-              onChange={(value) =>
-                setForm((prev) => ({ ...prev, payment_method_id: value ?? "" }))
-              }
-              searchable
-              clearable
-            />
-            <Select
-              label="Status"
-              data={[
-                { value: "active", label: "Active" },
-                { value: "paused", label: "Paused" },
-                { value: "cancelled", label: "Cancelled" },
-              ]}
-              value={form.status}
-              onChange={(value) =>
-                setForm((prev) => ({
-                  ...prev,
-                  status: (value ?? "active") as Subscription["status"],
-                }))
-              }
-              required
-            />
-          </SimpleGrid>
-          <Textarea
-            label="Notes"
-            value={form.notes}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, notes: event.target.value }))
-            }
-            placeholder="Optional context"
-            minRows={2}
-          />
+          <Accordion
+            variant="separated"
+            radius="md"
+            defaultValue={shouldShowAdvanced ? "advanced" : undefined}
+          >
+            <Accordion.Item value="advanced">
+              <Accordion.Control>Advanced options</Accordion.Control>
+              <Accordion.Panel>
+                <Stack gap="sm">
+                  <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+                    <Select
+                      label="Payment method"
+                      data={paymentOptions}
+                      value={form.payment_method_id}
+                      onChange={(value) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          payment_method_id: value ?? "",
+                        }))
+                      }
+                      searchable
+                      clearable
+                    />
+                    <Select
+                      label="Status"
+                      data={[
+                        { value: "active", label: "Active" },
+                        { value: "paused", label: "Paused" },
+                        { value: "cancelled", label: "Cancelled" },
+                      ]}
+                      value={form.status}
+                      onChange={(value) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          status: (value ?? "active") as Subscription["status"],
+                        }))
+                      }
+                      required
+                    />
+                  </SimpleGrid>
+                  <Textarea
+                    label="Notes"
+                    value={form.notes}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, notes: event.target.value }))
+                    }
+                    placeholder="Optional context"
+                    minRows={2}
+                  />
+                </Stack>
+              </Accordion.Panel>
+            </Accordion.Item>
+          </Accordion>
           {error ? (
             <Alert color="red" variant="light">
               {error}

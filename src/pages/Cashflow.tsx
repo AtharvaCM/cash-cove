@@ -4,6 +4,7 @@ import { CashflowHeader } from "../components/cashflow/CashflowHeader";
 import { CashflowSummaryCards } from "../components/cashflow/CashflowSummaryCards";
 import { CashflowWeeklyChart } from "../components/cashflow/CashflowWeeklyChart";
 import { CashflowCategoryTables } from "../components/cashflow/CashflowCategoryTables";
+import { ReportsViewToggle } from "../components/reports/ReportsViewToggle";
 import { useCashflowData } from "../hooks/useCashflowData";
 import { useAppMonth } from "../context/AppMonthContext";
 
@@ -92,6 +93,7 @@ export const Cashflow = () => {
         onPaymentChange={(value) => setPaymentFilter(value ?? "")}
         onTagChange={(value) => setTagFilter(value ?? "")}
         onExport={handleExport}
+        viewToggle={<ReportsViewToggle value="cashflow" />}
       />
 
       <CashflowSummaryCards

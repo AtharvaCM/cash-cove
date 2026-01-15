@@ -1,4 +1,5 @@
 import { Button, Group, Menu, Paper, Stack, Text, Title } from "@mantine/core";
+import type { ReactNode } from "react";
 import { DateInput } from "@mantine/dates";
 import dayjs from "dayjs";
 import { Download, FileText } from "lucide-react";
@@ -12,6 +13,7 @@ type ReportHeaderProps = {
   onExportCsv: () => void;
   onExportPdf: () => void;
   disableExport: boolean;
+  viewToggle?: ReactNode;
 };
 
 export const ReportHeader = ({
@@ -23,6 +25,7 @@ export const ReportHeader = ({
   onExportCsv,
   onExportPdf,
   disableExport,
+  viewToggle,
 }: ReportHeaderProps) => {
   const today = dayjs().endOf("day").toDate();
   const applyPreset = (preset: "this-month" | "last-month" | "last-90") => {
@@ -43,8 +46,9 @@ export const ReportHeader = ({
   return (
     <Paper withBorder shadow="sm" radius="lg" p="md">
       <Group justify="space-between" align="center" wrap="wrap">
-        <Stack gap={2}>
+        <Stack gap={4}>
           <Title order={4}>Reports</Title>
+          {viewToggle}
           <Text size="sm" c="dimmed">
             {rangeLabel}
           </Text>

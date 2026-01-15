@@ -30,6 +30,7 @@ import {
   saveTransactionDefaults,
 } from "../../lib/preferences";
 import { useAppSelector } from "../../app/hooks";
+import { formatINR } from "../../lib/format";
 
 type QuickAddDrawerProps = {
   opened: boolean;
@@ -172,6 +173,19 @@ export const QuickAddDrawer = ({ opened, onClose }: QuickAddDrawerProps) => {
       })),
     [funds]
   );
+  const cashOnHand = useMemo(
+    () => accounts.reduce((sum, account) => sum + (account.current_balance ?? 0), 0),
+    [accounts]
+  );
+  const allocatedFunds = useMemo(
+    () => funds.reduce((sum, fund) => sum + fund.current_amount, 0),
+    [funds]
+  );
+  const unallocatedCash = cashOnHand - allocatedFunds;
+  const unallocatedLabel =
+    unallocatedCash >= 0
+      ? `Unallocated cash ${formatINR(unallocatedCash)}`
+      : `Over-allocated by ${formatINR(Math.abs(unallocatedCash))}`;
 
   const defaultAccountId = accounts[0]?.id ?? "";
   const effectiveAccountId = transactionForm.account_id || defaultAccountId;
@@ -252,8 +266,17 @@ export const QuickAddDrawer = ({ opened, onClose }: QuickAddDrawerProps) => {
       setError("Select a fund.");
       return;
     }
-    if (!fundForm.amount || Number.isNaN(Number(fundForm.amount))) {
+    const amountValue = Math.abs(Number(fundForm.amount));
+    if (!fundForm.amount || Number.isNaN(amountValue)) {
       setError("Enter a valid amount.");
+      return;
+    }
+    if (amountValue <= 0) {
+      setError("Enter an amount greater than 0.");
+      return;
+    }
+    if (amountValue - unallocatedCash > 0.01) {
+      setError(`Not enough unallocated cash. ${unallocatedLabel}.`);
       return;
     }
 
@@ -261,7 +284,7 @@ export const QuickAddDrawer = ({ opened, onClose }: QuickAddDrawerProps) => {
       await addFundContribution({
         fund_id: fundForm.fund_id,
         date: fundForm.date,
-        amount: Number(fundForm.amount),
+        amount: amountValue,
         note: fundForm.note.trim() ? fundForm.note.trim() : null,
       }).unwrap();
       handleClose();
@@ -473,6 +496,9 @@ export const QuickAddDrawer = ({ opened, onClose }: QuickAddDrawerProps) => {
                 required
               />
             </SimpleGrid>
+            <Text size="xs" c={unallocatedCash >= 0 ? "dimmed" : "red.6"}>
+              {unallocatedLabel}
+            </Text>
             <Textarea
               label="Note"
               value={fundForm.note}

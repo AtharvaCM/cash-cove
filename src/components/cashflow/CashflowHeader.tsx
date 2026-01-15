@@ -7,6 +7,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
+import type { ReactNode } from "react";
 import { Download, Filter, Tag } from "lucide-react";
 
 type SelectOption = { value: string; label: string };
@@ -22,6 +23,7 @@ type CashflowHeaderProps = {
   onPaymentChange: (value: string | null) => void;
   onTagChange: (value: string | null) => void;
   onExport: () => void;
+  viewToggle?: ReactNode;
 };
 
 export const CashflowHeader = ({
@@ -35,11 +37,13 @@ export const CashflowHeader = ({
   onPaymentChange,
   onTagChange,
   onExport,
+  viewToggle,
 }: CashflowHeaderProps) => (
   <Paper withBorder shadow="sm" radius="lg" p="md">
     <Group justify="space-between" align="flex-start" wrap="wrap" gap="md">
-      <Stack gap={2}>
+      <Stack gap={4}>
         <Title order={4}>{monthLabel}</Title>
+        {viewToggle}
         <Text size="sm" c="dimmed">
           Cashflow overview
         </Text>

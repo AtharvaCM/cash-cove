@@ -1,5 +1,6 @@
 import {
   Alert,
+  Accordion,
   Button,
   Checkbox,
   Group,
@@ -133,6 +134,11 @@ export const TransactionFormModal = ({
     defaultCardPaymentId;
   const effectivePaymentMethodId =
     form.payment_method_id || (shouldDefaultPayment ? defaultCardPaymentId : "");
+  const shouldShowAdvanced =
+    Boolean(form.tags.trim()) ||
+    Boolean(form.notes.trim()) ||
+    form.is_recurring ||
+    form.is_transfer;
 
   const handleChange = (
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -333,41 +339,54 @@ export const TransactionFormModal = ({
               onDropdownOpen={() => setPaymentTouched(true)}
             />
           </SimpleGrid>
-          <TextInput
-            label="Tags"
-            name="tags"
-            value={form.tags}
-            onChange={handleChange}
-            placeholder="food, weekend, work"
-          />
-          <Checkbox
-            label="Exclude from budgets/income (transfer, reimbursement, internal move)"
-            checked={form.is_transfer}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                is_transfer: event?.currentTarget?.checked ?? false,
-              }))
-            }
-          />
-          <Textarea
-            label="Notes"
-            name="notes"
-            value={form.notes}
-            onChange={handleChange}
-            placeholder="Optional details"
-            minRows={2}
-          />
-          <Checkbox
-            label="Mark as recurring (monthly)"
-            checked={form.is_recurring}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                is_recurring: event?.currentTarget?.checked ?? false,
-              }))
-            }
-          />
+          <Accordion
+            variant="separated"
+            radius="md"
+            defaultValue={shouldShowAdvanced ? "advanced" : undefined}
+          >
+            <Accordion.Item value="advanced">
+              <Accordion.Control>Advanced options</Accordion.Control>
+              <Accordion.Panel>
+                <Stack gap="sm">
+                  <TextInput
+                    label="Tags"
+                    name="tags"
+                    value={form.tags}
+                    onChange={handleChange}
+                    placeholder="food, weekend, work"
+                  />
+                  <Checkbox
+                    label="Exclude from budgets/income (transfer, reimbursement, internal move)"
+                    checked={form.is_transfer}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        is_transfer: event?.currentTarget?.checked ?? false,
+                      }))
+                    }
+                  />
+                  <Checkbox
+                    label="Mark as recurring (monthly)"
+                    checked={form.is_recurring}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        is_recurring: event?.currentTarget?.checked ?? false,
+                      }))
+                    }
+                  />
+                  <Textarea
+                    label="Notes"
+                    name="notes"
+                    value={form.notes}
+                    onChange={handleChange}
+                    placeholder="Optional details"
+                    minRows={2}
+                  />
+                </Stack>
+              </Accordion.Panel>
+            </Accordion.Item>
+          </Accordion>
           {error ? (
             <Alert color="red" variant="light">
               {error}

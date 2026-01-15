@@ -115,7 +115,7 @@ export const OverviewCards = ({
           {formatINR(totalSpent)}
         </Title>
         <Text size="sm" c="dimmed" fw={500}>
-          Budget alerts at 80% spend
+          Month-to-date spend
         </Text>
         {wrapTooltip(
           hasPreviousMonthData && previousTotalSpent !== undefined

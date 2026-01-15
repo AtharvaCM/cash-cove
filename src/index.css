@@ -27,9 +27,16 @@ body {
   min-height: 100vh;
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
   color: var(--ink);
-  background:
-    radial-gradient(1200px 1200px at 10% 10%, rgba(30, 136, 229, 0.06), transparent),
-    radial-gradient(900px 900px at 85% 5%, rgba(38, 166, 154, 0.06), transparent),
+  background: radial-gradient(
+      1200px 1200px at 10% 10%,
+      rgba(30, 136, 229, 0.06),
+      transparent
+    ),
+    radial-gradient(
+      900px 900px at 85% 5%,
+      rgba(38, 166, 154, 0.06),
+      transparent
+    ),
     linear-gradient(180deg, #f8fafc 0%, #f0f4fa 100%);
   overflow-x: hidden;
 }
@@ -164,8 +171,9 @@ p {
   bottom: 0;
   display: none;
   justify-content: space-between;
+  align-items: center;
   gap: 4px;
-  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  padding: 18px 12px calc(12px + env(safe-area-inset-bottom));
   background: rgba(255, 255, 255, 0.94);
   border-top: 1px solid var(--stroke);
   backdrop-filter: blur(10px);
@@ -174,7 +182,7 @@ p {
 }
 
 .mobile-nav-item {
-  flex: 1;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -206,6 +214,42 @@ p {
   background: var(--accent-soft);
   border-color: rgba(30, 136, 229, 0.3);
   color: var(--accent);
+}
+
+.mobile-quick-add {
+  position: fixed;
+  right: 18px;
+  bottom: calc(104px + env(safe-area-inset-bottom));
+  width: 42px;
+  height: 42px;
+  border-radius: 16px;
+  border: 1px solid rgba(30, 136, 229, 0.35);
+  background: linear-gradient(135deg, #1e88e5, #26a69a);
+  color: #fff;
+  padding: 0 !important;
+  font: inherit;
+  font-size: 0;
+  line-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 16px 30px rgba(30, 136, 229, 0.25);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  z-index: 70;
+}
+
+.mobile-quick-add svg {
+  display: block;
+  margin: 0;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+}
+
+.mobile-quick-add:active {
+  transform: scale(0.98);
+  box-shadow: 0 12px 22px rgba(30, 136, 229, 0.22);
 }
 
 .dashboard-priority-card {
@@ -609,9 +653,16 @@ button.link:not([class*="mantine-"]) {
   display: grid;
   grid-template-columns: 1.3fr 1fr;
   min-height: 100vh;
-  background:
-    radial-gradient(1200px 1200px at 15% 20%, rgba(30, 136, 229, 0.1), transparent),
-    radial-gradient(900px 900px at 85% 10%, rgba(38, 166, 154, 0.08), transparent),
+  background: radial-gradient(
+      1200px 1200px at 15% 20%,
+      rgba(30, 136, 229, 0.1),
+      transparent
+    ),
+    radial-gradient(
+      900px 900px at 85% 10%,
+      rgba(38, 166, 154, 0.08),
+      transparent
+    ),
     linear-gradient(180deg, #f3f6fb 0%, #eef3fa 100%);
 }
 
@@ -635,7 +686,11 @@ button.link:not([class*="mantine-"]) {
   color: #fff;
   padding: 32px;
   border-radius: 24px;
-  background: linear-gradient(145deg, rgba(30, 136, 229, 0.9), rgba(15, 118, 110, 0.9));
+  background: linear-gradient(
+    145deg,
+    rgba(30, 136, 229, 0.9),
+    rgba(15, 118, 110, 0.9)
+  );
   box-shadow: 0 25px 60px rgba(15, 23, 42, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
@@ -763,7 +818,7 @@ button.link:not([class*="mantine-"]) {
 
 @media (max-width: 900px) {
   .main {
-    padding-bottom: 96px;
+    padding-bottom: 120px;
   }
 
   .mobile-nav {

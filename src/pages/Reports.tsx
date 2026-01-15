@@ -5,6 +5,7 @@ import { ChartsSection } from "../components/dashboard/ChartsSection";
 import { CategoryTrendChart } from "../components/reports/CategoryTrendChart";
 import { ReportHeader } from "../components/reports/ReportHeader";
 import { ReportSummaryCards } from "../components/reports/ReportSummaryCards";
+import { ReportsViewToggle } from "../components/reports/ReportsViewToggle";
 import {
   useGetAccountsQuery,
   useGetCategoriesQuery,
@@ -153,6 +154,7 @@ export const Reports = () => {
         onExportCsv={handleExportCsv}
         onExportPdf={handleExportPdf}
         disableExport={!startDate || !endDate}
+        viewToggle={<ReportsViewToggle value="reports" />}
       />
 
       <ReportSummaryCards

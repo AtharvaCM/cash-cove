@@ -8,7 +8,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import type { SetupChecklistItem } from "./SetupChecklistCard";
 
@@ -44,14 +44,8 @@ export const InsightsCard = ({
   );
   const showTabs = availableTabs.length > 1;
 
-  useEffect(() => {
-    if (availableTabs.length === 0) {
-      return;
-    }
-    if (!availableTabs.includes(activeTab)) {
-      setActiveTab(availableTabs[0]);
-    }
-  }, [activeTab, availableTabs]);
+  const resolvedTab =
+    availableTabs.includes(activeTab) ? activeTab : availableTabs[0] ?? "setup";
 
   const completed = setupItems.filter((item) => item.done).length;
   const total = setupItems.length;
@@ -166,7 +160,7 @@ export const InsightsCard = ({
         </Stack>
         {showTabs ? (
           <Tabs
-            value={activeTab}
+            value={resolvedTab}
             onChange={(value) => setActiveTab(value as "setup" | "weekly")}
             variant="pills"
           >

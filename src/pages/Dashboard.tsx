@@ -14,8 +14,7 @@ import dayjs from "dayjs";
 import { Eye, EyeOff, SlidersHorizontal } from "lucide-react";
 import { ChartsSection } from "../components/dashboard/ChartsSection";
 import { OverviewCards } from "../components/dashboard/OverviewCards";
-import { WeeklyCheckInCard } from "../components/dashboard/WeeklyCheckInCard";
-import { SetupChecklistCard } from "../components/dashboard/SetupChecklistCard";
+import { InsightsCard } from "../components/dashboard/InsightsCard";
 import { AttentionStrip } from "../components/dashboard/AttentionStrip";
 import { SoftCapAlerts } from "../components/dashboard/SoftCapAlerts";
 import { RecentActivityTable } from "../components/dashboard/RecentActivityTable";
@@ -279,7 +278,7 @@ export const Dashboard = () => {
   const showNetCashflowCard = isPinned("net-cashflow");
   const showForecastCard = isPinned("forecast");
   const showUpcomingSubscriptionsCard = isPinned("upcoming-subscriptions");
-  const showPriorityGroup = showSetupChecklistCard || showWeeklyCheckInCard;
+  const showInsightsCard = showSetupChecklistCard || showWeeklyCheckInCard;
   const showBalanceGroup = showAccountBalances || showSoftCapAlerts;
   const showPlanningGroup =
     showCoverageCard ||
@@ -379,29 +378,15 @@ export const Dashboard = () => {
         {showQuickActionsCard ? (
           <QuickActionsCard style={sectionStyle(30)} />
         ) : null}
-        {showPriorityGroup ? (
-          <Group
-            align="stretch"
-            grow
-            wrap="wrap"
-            gap="md"
-            className="dashboard-section"
+        {showInsightsCard ? (
+          <InsightsCard
+            showSetup={showSetupChecklistCard}
+            showWeekly={showWeeklyCheckInCard}
+            setupItems={setupItems}
+            weeklyInsights={weeklyInsights}
+            weeklyNudge={weeklyNudge}
             style={sectionStyle(40)}
-          >
-            {showSetupChecklistCard ? (
-              <SetupChecklistCard
-                items={setupItems}
-                style={{ ...sectionStyle(80), flex: "1 1 320px" }}
-              />
-            ) : null}
-            {showWeeklyCheckInCard ? (
-              <WeeklyCheckInCard
-                insights={weeklyInsights}
-                nudge={weeklyNudge}
-                style={{ ...sectionStyle(120), flex: "1 1 320px" }}
-              />
-            ) : null}
-          </Group>
+          />
         ) : null}
 
         {showAttentionStrip ? (
@@ -502,9 +487,14 @@ export const Dashboard = () => {
         {showQuickActionsCard ? (
           <QuickActionsCard />
         ) : null}
-        {showSetupChecklistCard ? <SetupChecklistCard items={setupItems} /> : null}
-        {showWeeklyCheckInCard ? (
-          <WeeklyCheckInCard insights={weeklyInsights} nudge={weeklyNudge} />
+        {showInsightsCard ? (
+          <InsightsCard
+            showSetup={showSetupChecklistCard}
+            showWeekly={showWeeklyCheckInCard}
+            setupItems={setupItems}
+            weeklyInsights={weeklyInsights}
+            weeklyNudge={weeklyNudge}
+          />
         ) : null}
         {showAttentionStrip ? <AttentionStrip items={attentionItems} /> : null}
         {showAccountBalances ? (

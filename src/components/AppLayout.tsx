@@ -330,15 +330,17 @@ export const AppLayout = () => {
         <Paper withBorder radius="lg" p="md" className="topbar-card">
           <Group justify="space-between" align="center">
             <Stack gap={2}>
-              <Text
-                size="xs"
-                c="dimmed"
-                tt="uppercase"
-                fw={700}
-                style={{ letterSpacing: "0.14em" }}
-              >
-                Monthly snapshot
-              </Text>
+              {!isMobile ? (
+                <Text
+                  size="xs"
+                  c="dimmed"
+                  tt="uppercase"
+                  fw={700}
+                  style={{ letterSpacing: "0.14em" }}
+                >
+                  Monthly snapshot
+                </Text>
+              ) : null}
               <Group gap="xs">
                 <Title order={2}>{title}</Title>
                 <Divider orientation="vertical" />
@@ -359,26 +361,30 @@ export const AppLayout = () => {
                 clearable={false}
                 styles={{ input: { width: 160 } }}
               />
-              <Button
-                variant="light"
-                color="blue"
-                size="compact-sm"
-                onClick={() => setQuickAddOpen(true)}
-                leftSection={<Plus size={16} strokeWidth={2} />}
-                style={{ marginBottom: "2px" }}
-              >
-                Quick add
-              </Button>
-              <Button
-                variant="light"
-                color="gray"
-                size="compact-sm"
-                onClick={() => window.location.reload()}
-                leftSection={<RefreshCcw size={16} strokeWidth={2} />}
-                style={{ marginBottom: "2px" }}
-              >
-                Refresh
-              </Button>
+              {!isMobile ? (
+                <>
+                  <Button
+                    variant="light"
+                    color="blue"
+                    size="compact-sm"
+                    onClick={() => setQuickAddOpen(true)}
+                    leftSection={<Plus size={16} strokeWidth={2} />}
+                    style={{ marginBottom: "2px" }}
+                  >
+                    Quick add
+                  </Button>
+                  <Button
+                    variant="light"
+                    color="gray"
+                    size="compact-sm"
+                    onClick={() => window.location.reload()}
+                    leftSection={<RefreshCcw size={16} strokeWidth={2} />}
+                    style={{ marginBottom: "2px" }}
+                  >
+                    Refresh
+                  </Button>
+                </>
+              ) : null}
             </Group>
           </Group>
         </Paper>

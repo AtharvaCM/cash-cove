@@ -157,6 +157,57 @@ p {
   min-width: 0;
 }
 
+.mobile-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: none;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.94);
+  border-top: 1px solid var(--stroke);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.08);
+  z-index: 60;
+}
+
+.mobile-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  border-radius: 14px;
+  padding: 4px 2px;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.mobile-nav-item .mobile-nav-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--surface-alt);
+  border: 1px solid transparent;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.mobile-nav-item.active {
+  color: var(--accent);
+}
+
+.mobile-nav-item.active .mobile-nav-icon {
+  background: var(--accent-soft);
+  border-color: rgba(30, 136, 229, 0.3);
+  color: var(--accent);
+}
+
 .dashboard-priority-card {
   position: relative;
   overflow: hidden;
@@ -711,6 +762,14 @@ button.link:not([class*="mantine-"]) {
 }
 
 @media (max-width: 900px) {
+  .main {
+    padding-bottom: 96px;
+  }
+
+  .mobile-nav {
+    display: flex;
+  }
+
   .stats-grid,
   .grid-two,
   .page-grid {
@@ -757,6 +816,7 @@ button.link:not([class*="mantine-"]) {
 @media (max-width: 600px) {
   .main {
     padding: 20px;
+    padding-bottom: 96px;
   }
 
   .auth-shell {

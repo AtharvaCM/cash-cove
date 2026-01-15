@@ -804,99 +804,123 @@ export const Subscriptions = () => {
           </Group>
         </Group>
         <Stack gap="sm" mb="md">
-          <Group gap="sm" align="flex-end" wrap="wrap">
-            <TextInput
-              label="Search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Name, category, account"
-            />
-            <Select
-              label="Status"
-              data={[
-                { value: "active", label: "Active" },
-                { value: "paused", label: "Paused" },
-                { value: "cancelled", label: "Cancelled" },
-              ]}
-              value={filterStatus || null}
-              onChange={(value) => setFilterStatus(value ?? "")}
-              clearable
-            />
-            <Select
-              label="Account"
-              data={accounts.map((account) => ({
-                value: account.id,
-                label: account.name,
-              }))}
-              value={filterAccount || null}
-              onChange={(value) => setFilterAccount(value ?? "")}
-              clearable
-              searchable
-            />
-            <DateInput
-              label="Due from"
-              value={filterFrom ? dayjs(filterFrom).toDate() : null}
-              onChange={(value) =>
-                setFilterFrom(value ? dayjs(value).format("YYYY-MM-DD") : "")
-              }
-              clearable
-            />
-            <DateInput
-              label="Due to"
-              value={filterTo ? dayjs(filterTo).toDate() : null}
-              onChange={(value) =>
-                setFilterTo(value ? dayjs(value).format("YYYY-MM-DD") : "")
-              }
-              clearable
-            />
-            <TextInput
-              label="Min amount"
-              type="number"
-              value={minAmount}
-              onChange={(event) => setMinAmount(event.target.value)}
-              placeholder="0"
-              min="0"
-              step="0.01"
-            />
-            <TextInput
-              label="Max amount"
-              type="number"
-              value={maxAmount}
-              onChange={(event) => setMaxAmount(event.target.value)}
-              placeholder="0"
-              min="0"
-              step="0.01"
-            />
-            <Select
-              label="Saved"
-              data={savedFilterOptions}
-              value={selectedSavedId}
-              onChange={handleApplySavedFilter}
-              placeholder="Choose"
-              clearable
-            />
-            <Group gap="xs">
-              <ActionIcon
-                variant="light"
-                color="blue"
-                size="lg"
-                onClick={() => setSaveModalOpen(true)}
-                aria-label="Save current filters"
-              >
-                <Save size={16} strokeWidth={2} />
-              </ActionIcon>
-              <ActionIcon
-                variant="light"
-                color="red"
-                size="lg"
-                onClick={handleDeleteSavedFilter}
-                disabled={!selectedSavedId}
-                aria-label="Delete saved filter"
-              >
-                <Trash2 size={16} strokeWidth={2} />
-              </ActionIcon>
-            </Group>
-          </Group>
+          <Paper withBorder radius="md" p="sm">
+            <SimpleGrid cols={{ base: 1, sm: 2, md: 3, xl: 6 }} spacing="sm">
+              <TextInput
+                label="Search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Name, category, account"
+                size="xs"
+              />
+              <Select
+                label="Status"
+                data={[
+                  { value: "active", label: "Active" },
+                  { value: "paused", label: "Paused" },
+                  { value: "cancelled", label: "Cancelled" },
+                ]}
+                value={filterStatus || null}
+                onChange={(value) => setFilterStatus(value ?? "")}
+                clearable
+                size="xs"
+              />
+              <Select
+                label="Account"
+                data={accounts.map((account) => ({
+                  value: account.id,
+                  label: account.name,
+                }))}
+                value={filterAccount || null}
+                onChange={(value) => setFilterAccount(value ?? "")}
+                clearable
+                searchable
+                size="xs"
+              />
+              <Group gap="xs" align="flex-end" wrap="nowrap" style={{ minWidth: 0 }}>
+                <DateInput
+                  label="Due from"
+                  value={filterFrom ? dayjs(filterFrom).toDate() : null}
+                  onChange={(value) =>
+                    setFilterFrom(value ? dayjs(value).format("YYYY-MM-DD") : "")
+                  }
+                  clearable
+                  size="xs"
+                  styles={{ input: { minWidth: 0 } }}
+                  style={{ flex: 1 }}
+                />
+                <DateInput
+                  label="Due to"
+                  value={filterTo ? dayjs(filterTo).toDate() : null}
+                  onChange={(value) =>
+                    setFilterTo(value ? dayjs(value).format("YYYY-MM-DD") : "")
+                  }
+                  clearable
+                  size="xs"
+                  styles={{ input: { minWidth: 0 } }}
+                  style={{ flex: 1 }}
+                />
+              </Group>
+              <Group gap="xs" align="flex-end" wrap="nowrap" style={{ minWidth: 0 }}>
+                <TextInput
+                  label="Min"
+                  type="number"
+                  value={minAmount}
+                  onChange={(event) => setMinAmount(event.target.value)}
+                  placeholder="0"
+                  min="0"
+                  step="0.01"
+                  size="xs"
+                  styles={{ input: { minWidth: 0 } }}
+                  style={{ flex: 1 }}
+                />
+                <TextInput
+                  label="Max"
+                  type="number"
+                  value={maxAmount}
+                  onChange={(event) => setMaxAmount(event.target.value)}
+                  placeholder="0"
+                  min="0"
+                  step="0.01"
+                  size="xs"
+                  styles={{ input: { minWidth: 0 } }}
+                  style={{ flex: 1 }}
+                />
+              </Group>
+              <Group gap="xs" align="flex-end" wrap="nowrap" style={{ minWidth: 0 }}>
+                <Select
+                  label="Saved"
+                  data={savedFilterOptions}
+                  value={selectedSavedId}
+                  onChange={handleApplySavedFilter}
+                  placeholder="Choose"
+                  clearable
+                  size="xs"
+                  styles={{ input: { minWidth: 0 } }}
+                  style={{ flex: 1 }}
+                />
+                <ActionIcon
+                  variant="light"
+                  color="blue"
+                  size="sm"
+                  onClick={() => setSaveModalOpen(true)}
+                  aria-label="Save current filters"
+                >
+                  <Save size={14} strokeWidth={2} />
+                </ActionIcon>
+                <ActionIcon
+                  variant="light"
+                  color="red"
+                  size="sm"
+                  onClick={handleDeleteSavedFilter}
+                  disabled={!selectedSavedId}
+                  aria-label="Delete saved filter"
+                >
+                  <Trash2 size={14} strokeWidth={2} />
+                </ActionIcon>
+              </Group>
+            </SimpleGrid>
+          </Paper>
           <ActiveFilterChips items={activeChips} />
         </Stack>
         <DatatrixTable

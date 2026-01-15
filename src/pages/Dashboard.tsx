@@ -1,4 +1,13 @@
-import { Button, Group, Paper, Stack, Switch, Text } from "@mantine/core";
+import {
+  Accordion,
+  Button,
+  Group,
+  Paper,
+  Stack,
+  Switch,
+  Text,
+} from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
@@ -90,6 +99,7 @@ const PIN_IDS = PIN_OPTIONS.map((option) => option.id);
 
 export const Dashboard = () => {
   const { month } = useAppMonth();
+  const isMobile = useMediaQuery("(max-width: 900px)");
   const [rollupCategories, setRollupCategories] = useState(() => {
     if (typeof window === "undefined") {
       return true;
@@ -292,6 +302,240 @@ export const Dashboard = () => {
   const sectionStyle = (delayMs: number): CSSProperties => ({
     "--dash-delay": `${delayMs}ms`,
   } as CSSProperties);
+  const pinnedHeader = (
+    <Group
+      justify="space-between"
+      align="center"
+      wrap="wrap"
+      gap="xs"
+      className="dashboard-section"
+      style={sectionStyle(20)}
+    >
+      <Stack gap={2}>
+        <Text fw={600}>Pinned cards</Text>
+        <Text size="sm" c="dimmed">
+          Pick the cards you want to see first.
+        </Text>
+      </Stack>
+      <Group gap="xs" align="center" wrap="wrap">
+        <Text size="xs" c="dimmed">
+          {pinned.length} of {PIN_OPTIONS.length} pinned
+        </Text>
+        <Button
+          variant="light"
+          size="xs"
+          leftSection={<SlidersHorizontal size={14} />}
+          onClick={() => setPinsModalOpen(true)}
+        >
+          Customize
+        </Button>
+      </Group>
+    </Group>
+  );
+  const pinnedHeaderMobile = (
+    <Group justify="space-between" align="center" wrap="wrap" gap="xs">
+      <Stack gap={2}>
+        <Text fw={600}>Pinned cards</Text>
+        <Text size="xs" c="dimmed">
+          {pinned.length} of {PIN_OPTIONS.length} pinned
+        </Text>
+      </Stack>
+      <Button
+        variant="light"
+        size="xs"
+        leftSection={<SlidersHorizontal size={14} />}
+        onClick={() => setPinsModalOpen(true)}
+      >
+        Customize
+      </Button>
+    </Group>
+  );
+  const pinnedCardsContent =
+    visiblePinnedCount === 0 ? (
+      <Paper
+        withBorder
+        shadow="sm"
+        radius="lg"
+        p="md"
+        className="dashboard-section"
+        style={sectionStyle(60)}
+      >
+        <Stack gap="xs">
+          <Text fw={600}>
+            {hasPinnedSelections ? "No pinned cards to show" : "No pinned cards yet"}
+          </Text>
+          <Text size="sm" c="dimmed">
+            {hasPinnedSelections
+              ? "Adjust your pins to bring a card back to the top of the dashboard."
+              : "Choose the cards you want to see at the top of your dashboard."}
+          </Text>
+          <Button variant="light" size="xs" onClick={() => setPinsModalOpen(true)}>
+            {hasPinnedSelections ? "Adjust pins" : "Choose cards"}
+          </Button>
+        </Stack>
+      </Paper>
+    ) : (
+      <>
+        {showQuickActionsCard ? (
+          <QuickActionsCard style={sectionStyle(30)} />
+        ) : null}
+        {showPriorityGroup ? (
+          <Group
+            align="stretch"
+            grow
+            wrap="wrap"
+            gap="md"
+            className="dashboard-section"
+            style={sectionStyle(40)}
+          >
+            {showSetupChecklistCard ? (
+              <SetupChecklistCard
+                items={setupItems}
+                style={{ ...sectionStyle(80), flex: "1 1 320px" }}
+              />
+            ) : null}
+            {showWeeklyCheckInCard ? (
+              <WeeklyCheckInCard
+                insights={weeklyInsights}
+                nudge={weeklyNudge}
+                style={{ ...sectionStyle(120), flex: "1 1 320px" }}
+              />
+            ) : null}
+          </Group>
+        ) : null}
+
+        {showAttentionStrip ? (
+          <AttentionStrip items={attentionItems} style={sectionStyle(160)} />
+        ) : null}
+
+        {showBalanceGroup ? (
+          <Group align="stretch" grow wrap="wrap" gap="md">
+            {showAccountBalances ? (
+              <AccountBalances
+                accounts={accounts}
+                hidden={hideBalances}
+                onToggle={() => setHideBalances((prev) => !prev)}
+                loading={isAccountsLoading}
+                icon={hideBalances ? <Eye size={16} /> : <EyeOff size={16} />}
+                style={{ flex: "1 1 320px" }}
+              />
+            ) : null}
+            {showSoftCapAlerts ? (
+              <SoftCapAlerts
+                warnings={warnings}
+                hasBudgets={hasBudgets}
+                style={{ flex: "1 1 320px" }}
+              />
+            ) : null}
+          </Group>
+        ) : null}
+
+        {showPlanningGroup ? (
+          <Group align="stretch" grow wrap="wrap" gap="md">
+            {showCoverageCard ? (
+              <CoverageCard
+                cashOnHand={cashOnHand}
+                funds={funds}
+                style={{ flex: "1 1 320px" }}
+              />
+            ) : null}
+            {showNetCashflowCard ? (
+              <NetCashflowCard
+                income={incomeTotal}
+                expense={expenseTotal}
+                style={{ flex: "1 1 320px" }}
+              />
+            ) : null}
+            {showForecastCard ? (
+              <ForecastCard
+                cashOnHand={cashOnHand}
+                avgDailySpend={avgDailySpend}
+                recurringIncome={recurringIncome}
+                recurringExpense={recurringExpense}
+                style={{ flex: "1 1 320px" }}
+              />
+            ) : null}
+            {showUpcomingSubscriptionsCard ? (
+              <UpcomingSubscriptionsCard
+                subscriptions={subscriptions}
+                style={{ flex: "1 1 320px" }}
+              />
+            ) : null}
+          </Group>
+        ) : null}
+      </>
+    );
+  const chartsBlock = (
+    <Stack gap="md">
+      <Group justify="space-between" align="center" wrap="wrap" gap="xs">
+        <Text size="sm" c="dimmed" maw={{ base: "100%", sm: "70%" }}>
+          Charts show subcategories rolled into their parent when enabled.
+        </Text>
+        <Switch
+          label="Roll up subcategories in charts"
+          checked={rollupCategories}
+          onChange={(event) => setRollupCategories(event.currentTarget.checked)}
+        />
+      </Group>
+      <ChartsSection pieData={pieData} dailyData={dailyData} />
+    </Stack>
+  );
+  const pinnedCardsContentMobile =
+    visiblePinnedCount === 0 ? (
+      <Paper withBorder shadow="sm" radius="lg" p="md">
+        <Stack gap="xs">
+          <Text fw={600}>
+            {hasPinnedSelections ? "No pinned cards to show" : "No pinned cards yet"}
+          </Text>
+          <Text size="sm" c="dimmed">
+            {hasPinnedSelections
+              ? "Adjust your pins to bring a card back to the top of the dashboard."
+              : "Choose the cards you want to see at the top of your dashboard."}
+          </Text>
+          <Button variant="light" size="xs" onClick={() => setPinsModalOpen(true)}>
+            {hasPinnedSelections ? "Adjust pins" : "Choose cards"}
+          </Button>
+        </Stack>
+      </Paper>
+    ) : (
+      <Stack gap="md">
+        {showQuickActionsCard ? (
+          <QuickActionsCard />
+        ) : null}
+        {showSetupChecklistCard ? <SetupChecklistCard items={setupItems} /> : null}
+        {showWeeklyCheckInCard ? (
+          <WeeklyCheckInCard insights={weeklyInsights} nudge={weeklyNudge} />
+        ) : null}
+        {showAttentionStrip ? <AttentionStrip items={attentionItems} /> : null}
+        {showAccountBalances ? (
+          <AccountBalances
+            accounts={accounts}
+            hidden={hideBalances}
+            onToggle={() => setHideBalances((prev) => !prev)}
+            loading={isAccountsLoading}
+            icon={hideBalances ? <Eye size={16} /> : <EyeOff size={16} />}
+          />
+        ) : null}
+        {showSoftCapAlerts ? (
+          <SoftCapAlerts warnings={warnings} hasBudgets={hasBudgets} />
+        ) : null}
+        {showCoverageCard ? <CoverageCard cashOnHand={cashOnHand} funds={funds} /> : null}
+        {showNetCashflowCard ? (
+          <NetCashflowCard income={incomeTotal} expense={expenseTotal} />
+        ) : null}
+        {showForecastCard ? (
+          <ForecastCard
+            cashOnHand={cashOnHand}
+            avgDailySpend={avgDailySpend}
+            recurringIncome={recurringIncome}
+            recurringExpense={recurringExpense}
+          />
+        ) : null}
+        {showUpcomingSubscriptionsCard ? (
+          <UpcomingSubscriptionsCard subscriptions={subscriptions} />
+        ) : null}
+      </Stack>
+    );
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -333,168 +577,55 @@ export const Dashboard = () => {
         previousTotalBudget={previousTotalBudget}
         hasPreviousMonthData={hasPreviousMonthData}
       />
-
-      <Group
-        justify="space-between"
-        align="center"
-        wrap="wrap"
-        gap="xs"
-        className="dashboard-section"
-        style={sectionStyle(20)}
-      >
-        <Stack gap={2}>
-          <Text fw={600}>Pinned cards</Text>
-          <Text size="sm" c="dimmed">
-            Pick the cards you want to see first.
-          </Text>
-        </Stack>
-        <Group gap="xs" align="center" wrap="wrap">
-          <Text size="xs" c="dimmed">
-            {pinned.length} of {PIN_OPTIONS.length} pinned
-          </Text>
-          <Button
-            variant="light"
-            size="xs"
-            leftSection={<SlidersHorizontal size={14} />}
-            onClick={() => setPinsModalOpen(true)}
-          >
-            Customize
-          </Button>
-        </Group>
-      </Group>
-
-      {visiblePinnedCount === 0 ? (
-        <Paper
-          withBorder
-          shadow="sm"
-          radius="lg"
-          p="md"
-          className="dashboard-section"
-          style={sectionStyle(60)}
-        >
-          <Stack gap="xs">
-            <Text fw={600}>
-              {hasPinnedSelections ? "No pinned cards to show" : "No pinned cards yet"}
-            </Text>
-            <Text size="sm" c="dimmed">
-              {hasPinnedSelections
-                ? "Adjust your pins to bring a card back to the top of the dashboard."
-                : "Choose the cards you want to see at the top of your dashboard."}
-            </Text>
-            <Button variant="light" size="xs" onClick={() => setPinsModalOpen(true)}>
-              {hasPinnedSelections ? "Adjust pins" : "Choose cards"}
-            </Button>
-          </Stack>
-        </Paper>
+      {isMobile ? (
+        <Accordion multiple defaultValue={["pinned"]} variant="separated">
+          <Accordion.Item value="pinned">
+            <Accordion.Control>
+              <Group justify="space-between" align="center" style={{ width: "100%" }}>
+                <Text fw={600}>Pinned cards</Text>
+                <Text size="xs" c="dimmed">
+                  {pinned.length}/{PIN_OPTIONS.length}
+                </Text>
+              </Group>
+            </Accordion.Control>
+            <Accordion.Panel>
+              <Stack gap="md">
+                {pinnedHeaderMobile}
+                {pinnedCardsContentMobile}
+              </Stack>
+            </Accordion.Panel>
+          </Accordion.Item>
+          <Accordion.Item value="charts">
+            <Accordion.Control>
+              <Text fw={600}>Charts & trends</Text>
+            </Accordion.Control>
+            <Accordion.Panel>{chartsBlock}</Accordion.Panel>
+          </Accordion.Item>
+          <Accordion.Item value="activity">
+            <Accordion.Control>
+              <Text fw={600}>Recent activity</Text>
+            </Accordion.Control>
+            <Accordion.Panel>
+              <RecentActivityTable
+                transactions={transactions}
+                categoryMap={categoryMap}
+                isLoading={isLoading}
+              />
+            </Accordion.Panel>
+          </Accordion.Item>
+        </Accordion>
       ) : (
         <>
-          {showQuickActionsCard ? (
-            <QuickActionsCard style={sectionStyle(30)} />
-          ) : null}
-          {showPriorityGroup ? (
-            <Group
-              align="stretch"
-              grow
-              wrap="wrap"
-              gap="md"
-              className="dashboard-section"
-              style={sectionStyle(40)}
-            >
-              {showSetupChecklistCard ? (
-                <SetupChecklistCard
-                  items={setupItems}
-                  style={{ ...sectionStyle(80), flex: "1 1 320px" }}
-                />
-              ) : null}
-              {showWeeklyCheckInCard ? (
-                <WeeklyCheckInCard
-                  insights={weeklyInsights}
-                  nudge={weeklyNudge}
-                  style={{ ...sectionStyle(120), flex: "1 1 320px" }}
-                />
-              ) : null}
-            </Group>
-          ) : null}
-
-          {showAttentionStrip ? (
-            <AttentionStrip items={attentionItems} style={sectionStyle(160)} />
-          ) : null}
-
-          {showBalanceGroup ? (
-            <Group align="stretch" grow wrap="wrap" gap="md">
-              {showAccountBalances ? (
-                <AccountBalances
-                  accounts={accounts}
-                  hidden={hideBalances}
-                  onToggle={() => setHideBalances((prev) => !prev)}
-                  loading={isAccountsLoading}
-                  icon={hideBalances ? <Eye size={16} /> : <EyeOff size={16} />}
-                  style={{ flex: "1 1 320px" }}
-                />
-              ) : null}
-              {showSoftCapAlerts ? (
-                <SoftCapAlerts
-                  warnings={warnings}
-                  hasBudgets={hasBudgets}
-                  style={{ flex: "1 1 320px" }}
-                />
-              ) : null}
-            </Group>
-          ) : null}
-
-          {showPlanningGroup ? (
-            <Group align="stretch" grow wrap="wrap" gap="md">
-              {showCoverageCard ? (
-                <CoverageCard
-                  cashOnHand={cashOnHand}
-                  funds={funds}
-                  style={{ flex: "1 1 320px" }}
-                />
-              ) : null}
-              {showNetCashflowCard ? (
-                <NetCashflowCard
-                  income={incomeTotal}
-                  expense={expenseTotal}
-                  style={{ flex: "1 1 320px" }}
-                />
-              ) : null}
-              {showForecastCard ? (
-                <ForecastCard
-                  cashOnHand={cashOnHand}
-                  avgDailySpend={avgDailySpend}
-                  recurringIncome={recurringIncome}
-                  recurringExpense={recurringExpense}
-                  style={{ flex: "1 1 320px" }}
-                />
-              ) : null}
-              {showUpcomingSubscriptionsCard ? (
-                <UpcomingSubscriptionsCard
-                  subscriptions={subscriptions}
-                  style={{ flex: "1 1 320px" }}
-                />
-              ) : null}
-            </Group>
-          ) : null}
+          {pinnedHeader}
+          {pinnedCardsContent}
+          {chartsBlock}
+          <RecentActivityTable
+            transactions={transactions}
+            categoryMap={categoryMap}
+            isLoading={isLoading}
+          />
         </>
       )}
-      <Group justify="space-between" align="center" wrap="wrap" gap="xs">
-        <Text size="sm" c="dimmed" maw={{ base: "100%", sm: "70%" }}>
-          Charts show subcategories rolled into their parent when enabled.
-        </Text>
-        <Switch
-          label="Roll up subcategories in charts"
-          checked={rollupCategories}
-          onChange={(event) => setRollupCategories(event.currentTarget.checked)}
-        />
-      </Group>
-
-      <ChartsSection pieData={pieData} dailyData={dailyData} />
-
-      <RecentActivityTable
-        transactions={transactions}
-        categoryMap={categoryMap}
-        isLoading={isLoading}
-      />
       <DashboardPinsModal
         opened={pinsModalOpen}
         onClose={() => setPinsModalOpen(false)}

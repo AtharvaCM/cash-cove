@@ -97,7 +97,7 @@ export const AppLayout = () => {
   const shellClassName = `app-shell${isCollapsed ? " collapsed" : ""}`;
   const shellStyle = {
     gridTemplateColumns: isMobile ? "1fr" : `${sidebarWidth}px 1fr`,
-    gridTemplateRows: isMobile ? "auto 1fr" : undefined,
+    gridTemplateRows: isMobile ? "1fr" : undefined,
     transition: "grid-template-columns 200ms ease",
   };
 
@@ -151,6 +151,13 @@ export const AppLayout = () => {
     { to: "/funds", label: "Funds", icon: <PiggyBank size={18} /> },
     { to: "/settings", label: "Settings", icon: <SettingsIcon size={18} /> },
   ];
+  const mobileNavItems = [
+    { to: "/", label: "Home", icon: <LayoutGrid size={20} /> },
+    { to: "/transactions", label: "Transactions", icon: <List size={20} /> },
+    { to: "/budgets", label: "Budgets", icon: <Wallet size={20} /> },
+    { to: "/subscriptions", label: "Subs", icon: <Repeat size={20} /> },
+    { to: "/settings", label: "Settings", icon: <SettingsIcon size={20} /> },
+  ];
 
   const isActiveRoute = (path: string) =>
     location.pathname === path ||
@@ -166,157 +173,159 @@ export const AppLayout = () => {
         opened={quickAddOpen}
         onClose={() => setQuickAddOpen(false)}
       />
-      <aside
-        className="sidebar"
-        onMouseEnter={() =>
-          !isMobile && isCollapsed && setIsSidebarHovering(true)
-        }
-        onMouseLeave={() => !isMobile && setIsSidebarHovering(false)}
-        style={{ width: "100%", transition: "width 200ms ease" }}
-      >
-        <div className="sidebar-header">
-          <Group justify="space-between" align="center" wrap="nowrap">
-            <Group gap="sm" align="center" wrap="nowrap">
-              <div className="brand-mark">₹</div>
-              {isNavExpanded ? (
-                <div className="brand-text">
-                  <Title order={4}>CashCove</Title>
-                </div>
-              ) : null}
-            </Group>
-            {isNavExpanded && !isMobile ? (
-              <ActionIcon
-                variant="subtle"
-                color="gray"
-                size="md"
-                onClick={() => setIsCollapsed((current) => !current)}
-                aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-                aria-pressed={isCollapsed}
-                title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              >
-                {isCollapsed ? (
-                  <ChevronsRight size={18} />
-                ) : (
-                  <ChevronsLeft size={18} />
-                )}
-              </ActionIcon>
-            ) : null}
-          </Group>
-        </div>
-        <div className="sidebar-body">
-          <ScrollArea type="scroll" offsetScrollbars style={{ flex: 1 }}>
-            <Stack gap="md">
-              <Stack gap="xs">
-                {navItems.map((item) => {
-                  const isActive = isActiveRoute(item.to);
-                  const navLink = (
-                    <MantineNavLink
-                      component={RouterNavLink}
-                      to={item.to}
-                      label={item.label}
-                      aria-label={item.label}
-                      leftSection={
-                        <ThemeIcon
-                          variant={isActive ? "filled" : "light"}
-                          color="brand"
-                          radius="md"
-                          size={32}
-                        >
-                          {item.icon}
-                        </ThemeIcon>
-                      }
-                      active={isActive}
-                      variant="subtle"
-                      styles={{
-                        root: {
-                          borderRadius: "12px",
-                          padding: isNavExpanded ? "8px 10px" : undefined,
-                          border:
-                            isActive && isNavExpanded
-                              ? "1px solid var(--stroke)"
-                              : undefined,
-                          backgroundColor:
-                            isActive && isNavExpanded
-                              ? "var(--surface-alt)"
-                              : undefined,
-                        },
-                        body: {
-                          justifyContent: isNavExpanded
-                            ? "flex-start"
-                            : "center",
-                        },
-                        label: {
-                          display: isNavExpanded ? "block" : "none",
-                          fontWeight: 600,
-                        },
-                        section: {
-                          marginInlineEnd: isNavExpanded ? 12 : 0,
-                        },
-                      }}
-                    />
-                  );
-
-                  return isNavExpanded ? (
-                    <div key={item.to}>{navLink}</div>
-                  ) : (
-                    <Tooltip
-                      key={item.to}
-                      label={item.label}
-                      position="right"
-                      withArrow
-                    >
-                      {navLink}
-                    </Tooltip>
-                  );
-                })}
-              </Stack>
-            </Stack>
-          </ScrollArea>
-        </div>
-        <div className="sidebar-footer">
-          <Stack gap="sm" align={isNavExpanded ? "stretch" : "center"}>
-            {isNavExpanded ? (
-              <Paper withBorder radius="md" p="sm">
-                <Text size="sm" c="dimmed">
-                  {user?.email ?? ""}
-                </Text>
-              </Paper>
-            ) : null}
-            {isNavExpanded ? (
-              <Button
-                variant="light"
-                color="gray"
-                leftSection={
-                  <ThemeIcon
-                    variant="transparent"
-                    color="gray"
-                    radius="md"
-                    size={28}
-                  >
-                    <LogOutIcon size={20} />
-                  </ThemeIcon>
-                }
-                onClick={handleSignOut}
-                fullWidth
-              >
-                Sign out
-              </Button>
-            ) : (
-              <Tooltip label="Sign out" position="right" withArrow>
+      {isMobile ? null : (
+        <aside
+          className="sidebar"
+          onMouseEnter={() =>
+            !isMobile && isCollapsed && setIsSidebarHovering(true)
+          }
+          onMouseLeave={() => !isMobile && setIsSidebarHovering(false)}
+          style={{ width: "100%", transition: "width 200ms ease" }}
+        >
+          <div className="sidebar-header">
+            <Group justify="space-between" align="center" wrap="nowrap">
+              <Group gap="sm" align="center" wrap="nowrap">
+                <div className="brand-mark">₹</div>
+                {isNavExpanded ? (
+                  <div className="brand-text">
+                    <Title order={4}>CashCove</Title>
+                  </div>
+                ) : null}
+              </Group>
+              {isNavExpanded && !isMobile ? (
                 <ActionIcon
                   variant="subtle"
                   color="gray"
-                  size="lg"
-                  onClick={handleSignOut}
-                  aria-label="Sign out"
+                  size="md"
+                  onClick={() => setIsCollapsed((current) => !current)}
+                  aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                  aria-pressed={isCollapsed}
+                  title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 >
-                  <LogOutIcon size={20} />
+                  {isCollapsed ? (
+                    <ChevronsRight size={18} />
+                  ) : (
+                    <ChevronsLeft size={18} />
+                  )}
                 </ActionIcon>
-              </Tooltip>
-            )}
-          </Stack>
-        </div>
-      </aside>
+              ) : null}
+            </Group>
+          </div>
+          <div className="sidebar-body">
+            <ScrollArea type="scroll" offsetScrollbars style={{ flex: 1 }}>
+              <Stack gap="md">
+                <Stack gap="xs">
+                  {navItems.map((item) => {
+                    const isActive = isActiveRoute(item.to);
+                    const navLink = (
+                      <MantineNavLink
+                        component={RouterNavLink}
+                        to={item.to}
+                        label={item.label}
+                        aria-label={item.label}
+                        leftSection={
+                          <ThemeIcon
+                            variant={isActive ? "filled" : "light"}
+                            color="brand"
+                            radius="md"
+                            size={32}
+                          >
+                            {item.icon}
+                          </ThemeIcon>
+                        }
+                        active={isActive}
+                        variant="subtle"
+                        styles={{
+                          root: {
+                            borderRadius: "12px",
+                            padding: isNavExpanded ? "8px 10px" : undefined,
+                            border:
+                              isActive && isNavExpanded
+                                ? "1px solid var(--stroke)"
+                                : undefined,
+                            backgroundColor:
+                              isActive && isNavExpanded
+                                ? "var(--surface-alt)"
+                                : undefined,
+                          },
+                          body: {
+                            justifyContent: isNavExpanded
+                              ? "flex-start"
+                              : "center",
+                          },
+                          label: {
+                            display: isNavExpanded ? "block" : "none",
+                            fontWeight: 600,
+                          },
+                          section: {
+                            marginInlineEnd: isNavExpanded ? 12 : 0,
+                          },
+                        }}
+                      />
+                    );
+
+                    return isNavExpanded ? (
+                      <div key={item.to}>{navLink}</div>
+                    ) : (
+                      <Tooltip
+                        key={item.to}
+                        label={item.label}
+                        position="right"
+                        withArrow
+                      >
+                        {navLink}
+                      </Tooltip>
+                    );
+                  })}
+                </Stack>
+              </Stack>
+            </ScrollArea>
+          </div>
+          <div className="sidebar-footer">
+            <Stack gap="sm" align={isNavExpanded ? "stretch" : "center"}>
+              {isNavExpanded ? (
+                <Paper withBorder radius="md" p="sm">
+                  <Text size="sm" c="dimmed">
+                    {user?.email ?? ""}
+                  </Text>
+                </Paper>
+              ) : null}
+              {isNavExpanded ? (
+                <Button
+                  variant="light"
+                  color="gray"
+                  leftSection={
+                    <ThemeIcon
+                      variant="transparent"
+                      color="gray"
+                      radius="md"
+                      size={28}
+                    >
+                      <LogOutIcon size={20} />
+                    </ThemeIcon>
+                  }
+                  onClick={handleSignOut}
+                  fullWidth
+                >
+                  Sign out
+                </Button>
+              ) : (
+                <Tooltip label="Sign out" position="right" withArrow>
+                  <ActionIcon
+                    variant="subtle"
+                    color="gray"
+                    size="lg"
+                    onClick={handleSignOut}
+                    aria-label="Sign out"
+                  >
+                    <LogOutIcon size={20} />
+                  </ActionIcon>
+                </Tooltip>
+              )}
+            </Stack>
+          </div>
+        </aside>
+      )}
       <main className="main">
         <Paper withBorder radius="lg" p="md" className="topbar-card">
           <Group justify="space-between" align="center">
@@ -377,6 +386,23 @@ export const AppLayout = () => {
           <Outlet />
         </div>
       </main>
+      {isMobile ? (
+        <nav className="mobile-nav" aria-label="Primary">
+          {mobileNavItems.map((item) => (
+            <RouterNavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === "/"}
+              className={({ isActive }) =>
+                `mobile-nav-item${isActive ? " active" : ""}`
+              }
+            >
+              <span className="mobile-nav-icon">{item.icon}</span>
+              <span className="mobile-nav-label">{item.label}</span>
+            </RouterNavLink>
+          ))}
+        </nav>
+      ) : null}
     </div>
   );
 };

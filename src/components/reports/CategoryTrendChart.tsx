@@ -1,4 +1,12 @@
-import { Group, Paper, SegmentedControl, Stack, Text, Title } from "@mantine/core";
+import {
+  Group,
+  Paper,
+  SegmentedControl,
+  Stack,
+  Text,
+  Title,
+} from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import {
   Bar,
   BarChart,
@@ -35,8 +43,15 @@ export const CategoryTrendChart = ({
   mode = "top",
   onModeChange,
 }: CategoryTrendChartProps) => {
+  const isMobile = useMediaQuery("(max-width: 900px)");
   const chartReady =
     series.length > 0 && data.length > 0 && hasTrendValues(data, series);
+  const legendItems = series.map((item, index) => ({
+    key: item.key,
+    label: item.label,
+    color:
+      chartPalette.categorical[index % chartPalette.categorical.length],
+  }));
   return (
     <Paper withBorder shadow="sm" radius="lg" p="md">
       <Stack gap="xs" mb="sm">
@@ -61,39 +76,62 @@ export const CategoryTrendChart = ({
         </Group>
       </Stack>
       {chartReady ? (
-        <ResponsiveContainer width="100%" height={260}>
-          <BarChart
-            data={data}
-            margin={{ top: 8, right: 12, left: 12, bottom: 4 }}
-            barCategoryGap="35%"
-            barGap={8}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              vertical={false}
-              stroke="var(--stroke)"
-            />
-            <XAxis dataKey="month" tickLine={false} axisLine={false} />
-            <YAxis tickLine={false} axisLine={false} />
-            <Tooltip formatter={(value) => formatINR(Number(value))} />
-            <Legend verticalAlign="top" height={32} />
-            {series.map((item, index) => (
-              <Bar
-                key={item.key}
-                dataKey={item.key}
-                name={item.label}
-                stackId="categories"
-                fill={
-                  chartPalette.categorical[
-                    index % chartPalette.categorical.length
-                  ]
-                }
-                radius={index === series.length - 1 ? [6, 6, 0, 0] : undefined}
-                barSize={32}
+        <Stack gap="sm">
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart
+              data={data}
+              margin={{ top: 8, right: 12, left: 12, bottom: 4 }}
+              barCategoryGap="35%"
+              barGap={8}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                vertical={false}
+                stroke="var(--stroke)"
               />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
+              <XAxis dataKey="month" tickLine={false} axisLine={false} />
+              <YAxis tickLine={false} axisLine={false} />
+              <Tooltip formatter={(value) => formatINR(Number(value))} />
+              {isMobile ? null : <Legend verticalAlign="top" height={32} />}
+              {series.map((item, index) => (
+                <Bar
+                  key={item.key}
+                  dataKey={item.key}
+                  name={item.label}
+                  stackId="categories"
+                  fill={
+                    chartPalette.categorical[
+                      index % chartPalette.categorical.length
+                    ]
+                  }
+                  radius={index === series.length - 1 ? [6, 6, 0, 0] : undefined}
+                  barSize={32}
+                />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+          {isMobile ? (
+            <Group gap="sm" wrap="wrap">
+              {legendItems.map((item) => (
+                <Group key={item.key} gap={6}>
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: "999px",
+                      backgroundColor: item.color,
+                      display: "inline-block",
+                    }}
+                  />
+                  <Text size="xs" c="dimmed">
+                    {item.label}
+                  </Text>
+                </Group>
+              ))}
+            </Group>
+          ) : null}
+        </Stack>
       ) : (
         <EmptyState description="Add expenses to see category trends over time." />
       )}

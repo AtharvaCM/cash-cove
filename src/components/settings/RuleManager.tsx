@@ -2,6 +2,7 @@ import {
   ActionIcon,
   Button,
   Group,
+  Divider,
   NumberInput,
   Modal,
   Paper,
@@ -14,6 +15,7 @@ import {
   TextInput,
   Textarea,
 } from "@mantine/core";
+import dayjs from "dayjs";
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash } from "lucide-react";
 import {
@@ -21,11 +23,13 @@ import {
   useDeleteRuleMutation,
   useGetCategoriesQuery,
   useGetRulesQuery,
+  useGetTransactionsByRangeQuery,
   useUpdateRuleMutation,
 } from "../../features/api/apiSlice";
 import type { TransactionRule } from "../../types/finance";
 import { SectionCard } from "./SectionCard";
 import { previewRules } from "../../lib/rules";
+import { RuleImpactPreview } from "./RuleImpactPreview";
 
 const MATCH_TYPES = [
   { value: "contains", label: "Contains" },
@@ -66,6 +70,13 @@ export const RuleManager = () => {
   const [testType, setTestType] = useState<"expense" | "income">("expense");
   const [testCategoryId, setTestCategoryId] = useState("");
   const [testTags, setTestTags] = useState("");
+
+  const previewStart = dayjs().subtract(90, "day").format("YYYY-MM-DD");
+  const previewEnd = dayjs().format("YYYY-MM-DD");
+  const { data: previewTransactions = [] } = useGetTransactionsByRangeQuery(
+    { start: previewStart, end: previewEnd },
+    { skip: !modalOpen }
+  );
 
   const categoryOptions = useMemo(
     () =>
@@ -111,18 +122,13 @@ export const RuleManager = () => {
       return;
     }
 
-    const tags = form.tag_names
-      .split(",")
-      .map((tag) => tag.trim().toLowerCase())
-      .filter(Boolean);
-
     const payload = {
       name: form.name.trim(),
       match_text: form.match_text.trim(),
       match_type: form.match_type as TransactionRule["match_type"],
       transaction_type: form.transaction_type as TransactionRule["transaction_type"],
       category_id: form.category_id || null,
-      tag_names: tags,
+      tag_names: draftTags,
       is_active: form.is_active,
       priority: Number(form.priority) || 100,
     };
@@ -175,6 +181,22 @@ export const RuleManager = () => {
   const testCategoryLabel = testResult.category_id
     ? categoryMap.get(testResult.category_id) ?? "Unknown"
     : "No category";
+
+  const draftTags = form.tag_names
+    .split(",")
+    .map((tag) => tag.trim().toLowerCase())
+    .filter(Boolean);
+  const draftRule: TransactionRule = {
+    id: editing?.id ?? "draft",
+    name: form.name.trim() || "Draft rule",
+    match_text: form.match_text.trim(),
+    match_type: form.match_type as TransactionRule["match_type"],
+    transaction_type: form.transaction_type as TransactionRule["transaction_type"],
+    category_id: form.category_id || null,
+    tag_names: draftTags,
+    is_active: form.is_active,
+    priority: Number(form.priority) || 100,
+  };
 
   return (
     <>
@@ -454,6 +476,13 @@ export const RuleManager = () => {
                 is_active: event.currentTarget.checked,
               }))
             }
+          />
+          <Divider />
+          <RuleImpactPreview
+            draftRule={draftRule}
+            rules={sortedRules}
+            transactions={previewTransactions}
+            categoryMap={categoryMap}
           />
           {error ? (
             <Text size="sm" c="red">

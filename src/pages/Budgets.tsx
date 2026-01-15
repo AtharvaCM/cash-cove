@@ -1,4 +1,14 @@
-import { Badge, Button, Group, Paper, Progress, SimpleGrid, Stack, Text, Title } from "@mantine/core";
+import {
+  Badge,
+  Button,
+  Group,
+  Paper,
+  Progress,
+  SimpleGrid,
+  Stack,
+  Text,
+  Title,
+} from "@mantine/core";
 import { Copy, Layers, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
@@ -72,7 +82,12 @@ const BudgetAllocationCell = (params: ICellRendererParams<BudgetRow>) => {
         <Text size="sm" fw={600}>
           {formatINR(spend)}
         </Text>
-        <Text size="sm" fw={600} c={remaining < 0 ? "red.6" : "dimmed"} ta="right">
+        <Text
+          size="sm"
+          fw={600}
+          c={remaining < 0 ? "red.6" : "dimmed"}
+          ta="right"
+        >
           {formatINR(remaining)}
         </Text>
       </SimpleGrid>
@@ -105,7 +120,9 @@ export const Budgets = () => {
   const { data: budgets = [], isLoading: isBudgetsLoading } =
     useGetBudgetsQuery(month);
   const { data: transactions = [] } = useGetTransactionsQuery({ month });
-  const prevMonth = dayjs(month + "-01").subtract(1, "month").format("YYYY-MM");
+  const prevMonth = dayjs(month + "-01")
+    .subtract(1, "month")
+    .format("YYYY-MM");
   const { data: prevBudgets = [] } = useGetBudgetsQuery(prevMonth);
   const [upsertBudgets] = useUpsertBudgetsMutation();
 
@@ -340,7 +357,10 @@ export const Budgets = () => {
             >
               Bulk add
             </Button>
-            <Button leftSection={<Plus size={16} strokeWidth={2} />} onClick={handleOpenCreate}>
+            <Button
+              leftSection={<Plus size={16} strokeWidth={2} />}
+              onClick={handleOpenCreate}
+            >
               Set budget
             </Button>
           </Group>

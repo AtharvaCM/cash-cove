@@ -22,6 +22,8 @@ import type { Account } from "../../types/finance";
 import { ConfirmDeleteModal } from "./ConfirmDeleteModal";
 import { SectionCard } from "./SectionCard";
 import { TransferModal } from "./TransferModal";
+import { AccountDetailsDrawer } from "./AccountDetailsDrawer";
+import { PayCardModal } from "./PayCardModal";
 
 const ACCOUNT_TYPES = [
   { value: "bank", label: "Bank (incl. debit cards)" },
@@ -51,13 +53,8 @@ export const AccountManager = () => {
   const [error, setError] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [payModalOpen, setPayModalOpen] = useState(false);
-  const [payForm, setPayForm] = useState({
-    fromAccountId: "",
-    cardAccountId: "",
-    amount: "",
-  });
-  const [payError, setPayError] = useState<string | null>(null);
   const [transferOpen, setTransferOpen] = useState(false);
+  const [detailAccountId, setDetailAccountId] = useState<string | null>(null);
 
   const openCreate = () => {
     setMode("create");
@@ -65,6 +62,10 @@ export const AccountManager = () => {
     setForm({ name: "", type: "bank", current_balance: "", currency: "INR" });
     setError(null);
     setModalOpen(true);
+  };
+
+  const handleOpenPayCard = () => {
+    setPayModalOpen(true);
   };
 
   const openEdit = (account: Account) => {
@@ -118,45 +119,8 @@ export const AccountManager = () => {
     (acc) => acc.type === "bank" || acc.type === "cash" || acc.type === "wallet"
   );
   const cardAccounts = accounts.filter((acc) => acc.type === "card");
-
-  const handlePayCard = async () => {
-    setPayError(null);
-    const amount = payForm.amount ? Number(payForm.amount) : 0;
-    if (!payForm.fromAccountId || !payForm.cardAccountId) {
-      setPayError("Choose both accounts.");
-      return;
-    }
-    if (!amount || Number.isNaN(amount) || amount <= 0) {
-      setPayError("Enter a valid amount.");
-      return;
-    }
-    const from = accounts.find((a) => a.id === payForm.fromAccountId);
-    const card = accounts.find((a) => a.id === payForm.cardAccountId);
-    if (!from || !card) {
-      setPayError("Accounts not found.");
-      return;
-    }
-    try {
-      await updateAccount({
-        id: from.id,
-        name: from.name,
-        type: from.type,
-        currency: from.currency,
-        current_balance: from.current_balance - amount,
-      }).unwrap();
-      await updateAccount({
-        id: card.id,
-        name: card.name,
-        type: card.type,
-        currency: card.currency,
-        current_balance: card.current_balance + amount,
-      }).unwrap();
-      setPayModalOpen(false);
-      setPayForm({ fromAccountId: "", cardAccountId: "", amount: "" });
-    } catch {
-      setPayError("Unable to record card payment.");
-    }
-  };
+  const selectedAccount =
+    accounts.find((acc) => acc.id === detailAccountId) ?? null;
 
   return (
     <>
@@ -171,7 +135,7 @@ export const AccountManager = () => {
           </Text>
           <Group gap="xs">
             <Button
-              onClick={() => setPayModalOpen(true)}
+              onClick={handleOpenPayCard}
               leftSection={<Pencil size={16} strokeWidth={2} />}
               variant="light"
               disabled={bankLikeAccounts.length === 0 || cardAccounts.length === 0}
@@ -203,7 +167,11 @@ export const AccountManager = () => {
             </Table.Thead>
             <Table.Tbody>
               {accounts.map((account) => (
-                <Table.Tr key={account.id}>
+                <Table.Tr
+                  key={account.id}
+                  onClick={() => setDetailAccountId(account.id)}
+                  style={{ cursor: "pointer" }}
+                >
                   <Table.Td>{account.name}</Table.Td>
                   <Table.Td>{account.type}</Table.Td>
                   <Table.Td>{account.current_balance.toLocaleString()}</Table.Td>
@@ -212,7 +180,10 @@ export const AccountManager = () => {
                       <ActionIcon
                         variant="subtle"
                         color="blue"
-                        onClick={() => openEdit(account)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openEdit(account);
+                        }}
                         aria-label="Edit account"
                       >
                         <Pencil size={16} strokeWidth={2} />
@@ -220,7 +191,10 @@ export const AccountManager = () => {
                       <ActionIcon
                         variant="subtle"
                         color="red"
-                        onClick={() => setDeleteId(account.id)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setDeleteId(account.id);
+                        }}
                         aria-label="Delete account"
                       >
                         <Trash size={16} strokeWidth={2} />
@@ -311,63 +285,17 @@ export const AccountManager = () => {
         accounts={accounts}
       />
 
-      <Modal
+      <AccountDetailsDrawer
+        opened={Boolean(detailAccountId)}
+        onClose={() => setDetailAccountId(null)}
+        account={selectedAccount}
+      />
+
+      <PayCardModal
         opened={payModalOpen}
         onClose={() => setPayModalOpen(false)}
-        title="Pay credit card"
-        size="md"
-      >
-        <Stack gap="sm">
-          <Select
-            label="From account (bank/cash)"
-            data={bankLikeAccounts.map((acc) => ({
-              value: acc.id,
-              label: `${acc.name} · ${acc.current_balance.toLocaleString()}`,
-            }))}
-            value={payForm.fromAccountId || null}
-            onChange={(value) =>
-              setPayForm((prev) => ({ ...prev, fromAccountId: value ?? "" }))
-            }
-            placeholder="Select source"
-          />
-          <Select
-            label="Card account"
-            data={cardAccounts.map((acc) => ({
-              value: acc.id,
-              label: `${acc.name} · ${acc.current_balance.toLocaleString()}`,
-            }))}
-            value={payForm.cardAccountId || null}
-            onChange={(value) =>
-              setPayForm((prev) => ({ ...prev, cardAccountId: value ?? "" }))
-            }
-            placeholder="Select card"
-          />
-          <TextInput
-            label="Amount"
-            type="number"
-            value={payForm.amount}
-            onChange={(event) =>
-              setPayForm((prev) => ({ ...prev, amount: event.target.value }))
-            }
-            placeholder="0"
-            min="0"
-            step="0.01"
-          />
-          {payError ? (
-            <Text size="sm" c="red">
-              {payError}
-            </Text>
-          ) : null}
-          <Group justify="flex-end">
-            <Button variant="subtle" color="gray" onClick={() => setPayModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handlePayCard} loading={isUpdating}>
-              Save payment
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
+        accounts={accounts}
+      />
     </>
   );
 };

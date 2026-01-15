@@ -51,8 +51,8 @@ describe("dashboard calculations", () => {
     expect(metrics.totalBudget).toBe(1000);
     expect(metrics.categoryTotals.get("c1")).toBe(100);
     expect(metrics.categoryTotals.has("c2")).toBe(false);
-    expect(metrics.dailyTotals.get("05 Aug")).toBe(100);
-    expect(metrics.dailyTotals.get("06 Aug")).toBe(50);
+    expect(metrics.dailyTotals.get("2024-08-05")).toBe(100);
+    expect(metrics.dailyTotals.get("2024-08-06")).toBe(50);
     expect(metrics.categoryBudgets.get("c1")).toBe(300);
     expect(metrics.overallBudget).toBe(1000);
   });
@@ -120,8 +120,8 @@ describe("dashboard calculations", () => {
     ]);
 
     const dailyTotals = new Map([
-      ["01 Aug", 120],
-      ["02 Aug", 80],
+      ["2024-08-01", 120],
+      ["2024-08-02", 80],
     ]);
     const dailyData = buildDailyData(dailyTotals);
     expect(dailyData).toEqual([

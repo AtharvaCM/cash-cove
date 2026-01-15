@@ -38,7 +38,7 @@ export const calculateDashboardMetrics = (
       if (tx.category_id) {
         totals.set(tx.category_id, (totals.get(tx.category_id) ?? 0) + tx.amount);
       }
-      const dayKey = dayjs(tx.date).format("DD MMM");
+      const dayKey = dayjs(tx.date).format("YYYY-MM-DD");
       daily.set(dayKey, (daily.get(dayKey) ?? 0) + tx.amount);
     });
 
@@ -73,10 +73,15 @@ export const buildPieData = (
   }));
 
 export const buildDailyData = (dailyTotals: Map<string, number>): DailyDatum[] =>
-  Array.from(dailyTotals.entries()).map(([day, value]) => ({
-    day,
-    value,
-  }));
+  Array.from(dailyTotals.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([day, value]) => {
+      const parsed = dayjs(day);
+      return {
+        day: parsed.isValid() ? parsed.format("DD MMM") : day,
+        value,
+      };
+    });
 
 export const buildBudgetWarnings = ({
   overallBudget,

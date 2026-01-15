@@ -10,17 +10,13 @@ import {
   YAxis,
 } from "recharts";
 import { formatINR } from "../../lib/format";
+import type { CategoryTrendSeries } from "../../lib/reports";
 import { chartPalette } from "../../theme";
 import { EmptyState } from "../common/EmptyState";
 
-export type CategoryTrendSeries = {
-  key: string;
-  label: string;
-};
-
 type CategoryTrendChartProps = {
-  data: Array<Record<string, number | string>>;
-  series: CategoryTrendSeries[];
+  data?: Array<Record<string, number | string>>;
+  series?: CategoryTrendSeries[];
 };
 
 const hasTrendValues = (
@@ -31,8 +27,12 @@ const hasTrendValues = (
     series.some((item) => Number(row[item.key] ?? 0) > 0)
   );
 
-export const CategoryTrendChart = ({ data, series }: CategoryTrendChartProps) => {
-  const chartReady = series.length > 0 && data.length > 0 && hasTrendValues(data, series);
+export const CategoryTrendChart = ({
+  data = [],
+  series = [],
+}: CategoryTrendChartProps) => {
+  const chartReady =
+    series.length > 0 && data.length > 0 && hasTrendValues(data, series);
   return (
     <Paper withBorder shadow="sm" radius="lg" p="md">
       <Stack gap="xs" mb="sm">

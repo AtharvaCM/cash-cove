@@ -57,14 +57,14 @@ export const ReportHeader = ({
           <DateInput
             label="From"
             value={start}
-            onChange={onStartChange}
+            onChange={(value) => onStartChange(value ? new Date(value) : null)}
             clearable={false}
             maxDate={end ?? today}
           />
           <DateInput
             label="To"
             value={end}
-            onChange={onEndChange}
+            onChange={(value) => onEndChange(value ? new Date(value) : null)}
             clearable={false}
             maxDate={today}
           />

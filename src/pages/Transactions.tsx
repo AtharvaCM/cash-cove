@@ -223,7 +223,7 @@ export const Transactions = () => {
     () => [
       {
         headerName: "",
-        field: "select",
+        colId: "select",
         width: 48,
         checkboxSelection: true,
         headerCheckboxSelection: true,

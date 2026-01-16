@@ -484,7 +484,9 @@ export const Subscriptions = () => {
       {
         headerName: "Next due",
         field: "next_due",
-        flex: 1,
+        flex: 1.1,
+        minWidth: 200,
+        cellClass: "datatrix-cell-top datatrix-cell-wrap",
         cellRenderer: SubscriptionNextDueCell,
       },
       {
@@ -981,6 +983,7 @@ export const Subscriptions = () => {
           loading={isLoading}
           getRowId={(row) => row.id}
           onRowClick={(row) => handleEditSubscription(row.id)}
+          rowHeight={68}
         />
       </Paper>
     </Stack>

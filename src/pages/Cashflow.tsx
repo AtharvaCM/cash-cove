@@ -7,6 +7,7 @@ import { CashflowCategoryTables } from "../components/cashflow/CashflowCategoryT
 import { ReportsViewToggle } from "../components/reports/ReportsViewToggle";
 import { useCashflowData } from "../hooks/useCashflowData";
 import { useAppMonth } from "../context/AppMonthContext";
+import { getDisplayCategoryId } from "../lib/transactions";
 
 export const Cashflow = () => {
   const { month } = useAppMonth();
@@ -57,15 +58,18 @@ export const Cashflow = () => {
       "Notes",
     ];
 
-    const rows = filteredTransactions.map((tx) => [
-      tx.date,
-      tx.type,
-      tx.amount.toFixed(2),
-      categoryMap.get(tx.category_id ?? "") ?? "Uncategorized",
-      paymentMap.get(tx.payment_method_id ?? "") ?? "-",
-      tx.tags?.map((tag) => tag.name).join(" | ") ?? "",
-      tx.notes ?? "",
-    ]);
+    const rows = filteredTransactions.map((tx) => {
+      const displayCategoryId = getDisplayCategoryId(tx);
+      return [
+        tx.date,
+        tx.type,
+        tx.amount.toFixed(2),
+        categoryMap.get(displayCategoryId ?? "") ?? "Uncategorized",
+        paymentMap.get(tx.payment_method_id ?? "") ?? "-",
+        tx.tags?.map((tag) => tag.name).join(" | ") ?? "",
+        tx.notes ?? "",
+      ];
+    });
 
     const csv = [header, ...rows]
       .map((row) => row.map((value) => escape(String(value))).join(","))

@@ -1,4 +1,5 @@
 import type { Transaction, Category } from "../types/finance";
+import { getNetExpenseCategoryKey, getNetExpenseDelta } from "./transactions";
 
 export const buildTopCategories = (
   transactions: Transaction[],
@@ -8,14 +9,17 @@ export const buildTopCategories = (
   const nameMap = new Map(categories.map((cat) => [cat.id, cat.name]));
   const totals = new Map<string, number>();
 
-  transactions
-    .filter((tx) => tx.type === "expense" && !tx.is_transfer)
-    .forEach((tx) => {
-      const key = tx.category_id ?? "Uncategorized";
-      totals.set(key, (totals.get(key) ?? 0) + tx.amount);
-    });
+  transactions.forEach((tx) => {
+    const delta = getNetExpenseDelta(tx);
+    if (delta === 0) {
+      return;
+    }
+    const key = getNetExpenseCategoryKey(tx) ?? "uncategorized";
+    totals.set(key, (totals.get(key) ?? 0) + delta);
+  });
 
   return Array.from(totals.entries())
+    .filter(([, amount]) => amount > 0)
     .map(([id, amount]) => ({
       id,
       name: nameMap.get(id) ?? "Uncategorized",

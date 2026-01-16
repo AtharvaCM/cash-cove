@@ -1,6 +1,7 @@
 import {
   Alert,
   Button,
+  Checkbox,
   Drawer,
   Group,
   SegmentedControl,
@@ -44,6 +45,8 @@ type QuickTransactionForm = {
   date: string;
   amount: string;
   category_id: string;
+  reimbursement_category_id: string;
+  is_reimbursement: boolean;
   account_id: string;
   payment_method_id: string;
   notes: string;
@@ -75,6 +78,8 @@ const buildTransactionForm = (
   date: dayjs().format("YYYY-MM-DD"),
   amount: "",
   category_id: defaults?.category_id ?? "",
+  reimbursement_category_id: "",
+  is_reimbursement: false,
   account_id: defaults?.account_id ?? "",
   payment_method_id: defaults?.payment_method_id ?? "",
   notes: "",
@@ -149,6 +154,16 @@ export const QuickAddDrawer = ({ opened, onClose }: QuickAddDrawerProps) => {
       })),
     [categories]
   );
+  const expenseCategoryOptions = useMemo(
+    () =>
+      categories
+        .filter((category) => category.type === "expense")
+        .map((category) => ({
+          value: category.id,
+          label: category.name,
+        })),
+    [categories]
+  );
   const accountOptions = useMemo(
     () =>
       accounts.map((account) => ({
@@ -202,13 +217,20 @@ export const QuickAddDrawer = ({ opened, onClose }: QuickAddDrawerProps) => {
   const effectivePaymentMethodId =
     transactionForm.payment_method_id ||
     (shouldDefaultPayment ? defaultCardPaymentId : "");
+  const isReimbursementIncome =
+    transactionForm.type === "income" && transactionForm.is_reimbursement;
 
   const handleModeChange = (value: string) => {
     const next = value as QuickMode;
     setMode(next);
     setError(null);
     if (next === "expense" || next === "income") {
-      setTransactionForm((prev) => ({ ...prev, type: next }));
+      setTransactionForm((prev) => ({
+        ...prev,
+        type: next,
+        is_reimbursement: next === "income" ? prev.is_reimbursement : false,
+        reimbursement_category_id: next === "income" ? prev.reimbursement_category_id : "",
+      }));
     }
   };
 
@@ -222,6 +244,13 @@ export const QuickAddDrawer = ({ opened, onClose }: QuickAddDrawerProps) => {
       setError("Select an account to keep balances in sync.");
       return;
     }
+    const reimbursementCategoryId = isReimbursementIncome
+      ? transactionForm.reimbursement_category_id || null
+      : null;
+    if (isReimbursementIncome && !reimbursementCategoryId) {
+      setError("Select an expense category to offset.");
+      return;
+    }
 
     const ruled = applyRulesToTransaction(
       {
@@ -229,7 +258,7 @@ export const QuickAddDrawer = ({ opened, onClose }: QuickAddDrawerProps) => {
           ? transactionForm.notes.trim()
           : null,
         type: transactionForm.type,
-        category_id: transactionForm.category_id || null,
+        category_id: isReimbursementIncome ? null : transactionForm.category_id || null,
         tags: [],
       },
       rules
@@ -240,20 +269,24 @@ export const QuickAddDrawer = ({ opened, onClose }: QuickAddDrawerProps) => {
         type: transactionForm.type,
         date: transactionForm.date,
         amount: Number(transactionForm.amount),
-        category_id: ruled.category_id,
+        category_id: isReimbursementIncome ? null : ruled.category_id,
+        reimbursement_category_id: reimbursementCategoryId,
         payment_method_id: effectivePaymentMethodId || null,
         account_id: effectiveAccountId || null,
         notes: transactionForm.notes.trim() ? transactionForm.notes.trim() : null,
         tags: ruled.tags,
         is_transfer: false,
         is_recurring: false,
+        is_reimbursement: isReimbursementIncome,
       }).unwrap();
 
-      saveTransactionDefaults(userId, {
-        account_id: effectiveAccountId || "",
-        payment_method_id: effectivePaymentMethodId || "",
-        category_id: ruled.category_id ?? "",
-      });
+      if (!isReimbursementIncome) {
+        saveTransactionDefaults(userId, {
+          account_id: effectiveAccountId || "",
+          payment_method_id: effectivePaymentMethodId || "",
+          category_id: ruled.category_id ?? "",
+        });
+      }
       handleClose();
     } catch {
       setError("Unable to save the transaction.");
@@ -397,17 +430,25 @@ export const QuickAddDrawer = ({ opened, onClose }: QuickAddDrawerProps) => {
             </SimpleGrid>
             <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
               <Select
-                label="Category"
-                data={categoryOptions}
-                value={transactionForm.category_id || null}
+                label={isReimbursementIncome ? "Offset category" : "Category"}
+                data={isReimbursementIncome ? expenseCategoryOptions : categoryOptions}
+                value={
+                  isReimbursementIncome
+                    ? transactionForm.reimbursement_category_id || null
+                    : transactionForm.category_id || null
+                }
                 onChange={(value) =>
                   setTransactionForm((prev) => ({
                     ...prev,
-                    category_id: value ?? "",
+                    reimbursement_category_id: isReimbursementIncome
+                      ? value ?? ""
+                      : prev.reimbursement_category_id,
+                    category_id: isReimbursementIncome ? prev.category_id : value ?? "",
                   }))
                 }
                 searchable
-                clearable
+                clearable={!isReimbursementIncome}
+                required={isReimbursementIncome}
               />
               <Select
                 label="Account"
@@ -424,6 +465,22 @@ export const QuickAddDrawer = ({ opened, onClose }: QuickAddDrawerProps) => {
                 clearable
               />
             </SimpleGrid>
+            {mode === "income" ? (
+              <Checkbox
+                label="This income is a reimbursement/refund"
+                checked={transactionForm.is_reimbursement}
+                onChange={(event) => {
+                  const checked = event.currentTarget.checked;
+                  setTransactionForm((prev) => ({
+                    ...prev,
+                    is_reimbursement: checked,
+                    reimbursement_category_id: checked
+                      ? prev.reimbursement_category_id || prev.category_id || ""
+                      : "",
+                  }));
+                }}
+              />
+            ) : null}
             <Select
               label="Payment method"
               data={paymentOptions}

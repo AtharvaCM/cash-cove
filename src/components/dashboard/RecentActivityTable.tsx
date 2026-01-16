@@ -5,6 +5,7 @@ import type { ColDef } from "ag-grid-community";
 import { DatatrixTable } from "../DatatrixTable";
 import { formatINR } from "../../lib/format";
 import type { Transaction } from "../../types/finance";
+import { getDisplayCategoryId } from "../../lib/transactions";
 
 type RecentActivityTableProps = {
   transactions: Transaction[];
@@ -20,15 +21,24 @@ type RecentRow = {
   amount: number;
   type: "expense" | "income";
   isTransfer: boolean;
+  isReimbursement: boolean;
 };
 
 const RecentTypeCell = (params: { data?: RecentRow }) => {
   const isTransfer = params.data?.isTransfer;
+  const isReimbursement = params.data?.isReimbursement;
   const type = params.data?.type ?? "expense";
   if (isTransfer) {
     return (
       <Badge variant="light" color="gray" radius="sm">
         Transfer
+      </Badge>
+    );
+  }
+  if (isReimbursement) {
+    return (
+      <Badge variant="light" color="blue" radius="sm">
+        Reimbursement
       </Badge>
     );
   }
@@ -49,11 +59,18 @@ export const RecentActivityTable = ({
       transactions.slice(0, 6).map((tx) => ({
         id: tx.id,
         date: dayjs(tx.date).format("DD MMM"),
-        category: categoryMap.get(tx.category_id ?? "") ?? "-",
+        category: (() => {
+          const displayCategoryId = getDisplayCategoryId(tx);
+          if (!displayCategoryId) {
+            return "-";
+          }
+          return categoryMap.get(displayCategoryId) ?? "-";
+        })(),
         notes: tx.notes ?? "-",
         amount: tx.amount,
         type: tx.type,
         isTransfer: Boolean(tx.is_transfer),
+        isReimbursement: Boolean(tx.is_reimbursement),
       })),
     [transactions, categoryMap]
   );

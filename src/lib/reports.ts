@@ -1,6 +1,12 @@
 import dayjs from "dayjs";
 import type { Transaction } from "../types/finance";
 import { formatINR } from "./format";
+import {
+  getDisplayCategoryId,
+  getIncomeDelta,
+  getNetExpenseCategoryKey,
+  getNetExpenseDelta,
+} from "./transactions";
 
 export type ChangeSummary = {
   label: string;
@@ -45,9 +51,12 @@ export const sumByType = (
   transactions: Transaction[],
   type: "income" | "expense"
 ) =>
-  transactions
-    .filter((tx) => tx.type === type && !tx.is_transfer)
-    .reduce((sum, tx) => sum + tx.amount, 0);
+  transactions.reduce((sum, tx) => {
+    if (type === "income") {
+      return sum + getIncomeDelta(tx);
+    }
+    return sum + getNetExpenseDelta(tx);
+  }, 0);
 
 export const buildChange = (current: number, previous: number): ChangeSummary => {
   if (previous === 0) {
@@ -120,10 +129,11 @@ export const buildReportCsvRows = (
   const rows = sorted.map((tx) => {
     const tags = tx.tags?.map((tag) => tag.name).join(" | ") ?? "";
     const notes = tx.notes ?? tx.notes_enc ?? "";
+    const displayCategoryId = getDisplayCategoryId(tx);
     return [
       tx.date,
       tx.type,
-      resolveCategoryLabel(tx.category_id ?? null, categoryMap),
+      resolveCategoryLabel(displayCategoryId ?? null, categoryMap),
       tx.amount.toFixed(2),
       resolveName(tx.account_id ?? null, accountMap),
       resolveName(tx.payment_method_id ?? null, paymentMap),
@@ -157,7 +167,8 @@ export const buildReportHtml = (payload: {
       ? "<tr><td colspan=\"5\">No transactions in this range.</td></tr>"
       : payload.transactions
           .map((tx) => {
-            const category = resolveCategoryLabel(tx.category_id ?? null, payload.categoryMap);
+            const displayCategoryId = getDisplayCategoryId(tx);
+            const category = resolveCategoryLabel(displayCategoryId ?? null, payload.categoryMap);
             const note = tx.notes ?? tx.notes_enc ?? "";
             return `<tr>
   <td>${escapeHtml(dayjs(tx.date).format("DD MMM YYYY"))}</td>
@@ -270,16 +281,20 @@ export const buildCategoryTrendData = (
   }
 
   const totalsByCategory = new Map<string, number>();
-  transactions
-    .filter((tx) => tx.type === "expense" && !tx.is_transfer)
-    .forEach((tx) => {
-      const key = tx.category_id ?? "uncategorized";
-      totalsByCategory.set(key, (totalsByCategory.get(key) ?? 0) + tx.amount);
-    });
+  transactions.forEach((tx) => {
+    const delta = getNetExpenseDelta(tx);
+    if (delta === 0) {
+      return;
+    }
+    const key = getNetExpenseCategoryKey(tx) ?? "uncategorized";
+    totalsByCategory.set(key, (totalsByCategory.get(key) ?? 0) + delta);
+  });
 
-  const ranked = Array.from(totalsByCategory.entries()).sort(
-    (a, b) => b[1] - a[1]
-  );
+  const ranked = Array.from(totalsByCategory.entries())
+    .filter(([, value]) => value > 0)
+    .sort(
+      (a, b) => b[1] - a[1]
+    );
   const top = ranked.slice(0, 5);
   const topKeys = new Set(top.map(([key]) => key));
   const seriesSource = mode === "all" ? ranked : top;
@@ -302,17 +317,26 @@ export const buildCategoryTrendData = (
 
   const rowMap = new Map(rows.map((item) => [item.key, item.row]));
 
-  transactions
-    .filter((tx) => tx.type === "expense" && !tx.is_transfer)
-    .forEach((tx) => {
-      const monthKey = dayjs(tx.date).format("YYYY-MM");
-      const row = rowMap.get(monthKey);
-      if (!row) return;
-      const rawKey = tx.category_id ?? "uncategorized";
-      const bucketKey =
-        mode === "top" ? (topKeys.has(rawKey) ? rawKey : "other") : rawKey;
-      row[bucketKey] = Number(row[bucketKey] ?? 0) + tx.amount;
+  transactions.forEach((tx) => {
+    const delta = getNetExpenseDelta(tx);
+    if (delta === 0) {
+      return;
+    }
+    const monthKey = dayjs(tx.date).format("YYYY-MM");
+    const row = rowMap.get(monthKey);
+    if (!row) return;
+    const rawKey = getNetExpenseCategoryKey(tx) ?? "uncategorized";
+    const bucketKey =
+      mode === "top" ? (topKeys.has(rawKey) ? rawKey : "other") : rawKey;
+    row[bucketKey] = Number(row[bucketKey] ?? 0) + delta;
+  });
+
+  rows.forEach(({ row }) => {
+    series.forEach((item) => {
+      const value = Number(row[item.key] ?? 0);
+      row[item.key] = value < 0 ? 0 : value;
     });
+  });
 
   return { data: rows.map((item) => item.row), series };
 };

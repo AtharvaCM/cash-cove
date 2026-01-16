@@ -31,11 +31,13 @@ export type Transaction = {
   date: string;
   amount: number;
   category_id: string | null;
+  reimbursement_category_id?: string | null;
   payment_method_id: string | null;
   account_id?: string | null;
   notes?: string | null;
   notes_enc?: string | null;
   is_transfer?: boolean;
+  is_reimbursement?: boolean;
   is_recurring: boolean;
   tags?: Tag[];
 };

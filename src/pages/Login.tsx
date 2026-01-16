@@ -26,6 +26,7 @@ export const Login = () => {
   const passwordAutoComplete =
     mode === "signin" ? "current-password" : "new-password";
   const passwordMinLength = mode === "signup" ? 8 : undefined;
+  const emailRedirectTo = globalThis.location?.origin;
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -36,7 +37,11 @@ export const Login = () => {
     const action =
       mode === "signin"
         ? supabase.auth.signInWithPassword({ email, password })
-        : supabase.auth.signUp({ email, password });
+        : supabase.auth.signUp({
+            email,
+            password,
+            options: emailRedirectTo ? { emailRedirectTo } : undefined,
+          });
 
     const { error: authError } = await action;
 

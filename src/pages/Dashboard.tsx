@@ -39,6 +39,7 @@ import {
   useGetSubscriptionsQuery,
 } from "../features/api/apiSlice";
 import { getUpcomingSubscriptions, isSubscriptionOverdue } from "../lib/subscriptions";
+import { getIncomeDelta, getNetExpenseDelta } from "../lib/transactions";
 import { useAppMonth } from "../context/AppMonthContext";
 
 const PIN_OPTIONS: DashboardPinOption[] = [
@@ -174,12 +175,11 @@ export const Dashboard = () => {
     0
   );
   const { incomeTotal, expenseTotal } = useMemo(() => {
-    const income = transactions
-      .filter((tx) => tx.type === "income" && !tx.is_transfer)
-      .reduce((sum, tx) => sum + tx.amount, 0);
-    const expense = transactions
-      .filter((tx) => tx.type === "expense" && !tx.is_transfer)
-      .reduce((sum, tx) => sum + tx.amount, 0);
+    const income = transactions.reduce((sum, tx) => sum + getIncomeDelta(tx), 0);
+    const expense = transactions.reduce(
+      (sum, tx) => sum + getNetExpenseDelta(tx),
+      0
+    );
     return { incomeTotal: income, expenseTotal: expense };
   }, [transactions]);
   const avgDailySpend = useMemo(() => {
@@ -188,11 +188,11 @@ export const Dashboard = () => {
   }, [expenseTotal]);
   const { recurringIncome, recurringExpense } = useMemo(() => {
     const income = transactions
-      .filter((tx) => tx.is_recurring && tx.type === "income" && !tx.is_transfer)
-      .reduce((sum, tx) => sum + tx.amount, 0);
+      .filter((tx) => tx.is_recurring)
+      .reduce((sum, tx) => sum + getIncomeDelta(tx), 0);
     const expense = transactions
-      .filter((tx) => tx.is_recurring && tx.type === "expense" && !tx.is_transfer)
-      .reduce((sum, tx) => sum + tx.amount, 0);
+      .filter((tx) => tx.is_recurring)
+      .reduce((sum, tx) => sum + getNetExpenseDelta(tx), 0);
     return { recurringIncome: income, recurringExpense: expense };
   }, [transactions]);
   const dueSoonCount = useMemo(

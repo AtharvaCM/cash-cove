@@ -23,6 +23,7 @@ import {
 } from "../../features/api/apiSlice";
 import type { Account } from "../../types/finance";
 import { formatINR } from "../../lib/format";
+import { getDisplayCategoryId } from "../../lib/transactions";
 
 type AccountDetailsDrawerProps = {
   opened: boolean;
@@ -185,8 +186,9 @@ export const AccountDetailsDrawer = ({
             {recentAccountTransactions.length > 0 ? (
               <Stack gap="sm">
                 {recentAccountTransactions.map((tx) => {
-                  const categoryLabel = tx.category_id
-                    ? categoryMap.get(tx.category_id) ?? "Uncategorized"
+                  const displayCategoryId = getDisplayCategoryId(tx);
+                  const categoryLabel = displayCategoryId
+                    ? categoryMap.get(displayCategoryId) ?? "Uncategorized"
                     : "Uncategorized";
                   const sign = tx.type === "expense" ? "-" : "+";
                   const amountLabel = tx.is_transfer
@@ -210,6 +212,10 @@ export const AccountDetailsDrawer = ({
                         {tx.is_transfer ? (
                           <Badge size="xs" variant="light" color="gray">
                             Transfer
+                          </Badge>
+                        ) : tx.is_reimbursement ? (
+                          <Badge size="xs" variant="light" color="blue">
+                            Reimbursement
                           </Badge>
                         ) : (
                           <Badge

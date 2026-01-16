@@ -61,8 +61,10 @@ const buildInitialForm = (
   tags: transaction?.tags?.length
     ? transaction.tags.map((tag) => tag.name).join(", ")
     : "",
+  reimbursement_category_id: transaction?.reimbursement_category_id ?? "",
   is_recurring: transaction?.is_recurring ?? false,
   is_transfer: transaction?.is_transfer ?? false,
+  is_reimbursement: transaction?.is_reimbursement ?? false,
 });
 
 export const TransactionFormModal = ({
@@ -104,6 +106,16 @@ export const TransactionFormModal = ({
       })),
     [categories]
   );
+  const expenseCategoryOptions = useMemo(
+    () =>
+      categories
+        .filter((category) => category.type === "expense")
+        .map((category) => ({
+          value: category.id,
+          label: category.name,
+        })),
+    [categories]
+  );
   const paymentOptions = useMemo(
     () =>
       paymentMethods.map((method) => ({
@@ -134,11 +146,14 @@ export const TransactionFormModal = ({
     defaultCardPaymentId;
   const effectivePaymentMethodId =
     form.payment_method_id || (shouldDefaultPayment ? defaultCardPaymentId : "");
+  const isReimbursementIncome = form.type === "income" && form.is_reimbursement;
   const shouldShowAdvanced =
     Boolean(form.tags.trim()) ||
     Boolean(form.notes.trim()) ||
     form.is_recurring ||
-    form.is_transfer;
+    form.is_transfer ||
+    form.is_reimbursement ||
+    Boolean(form.reimbursement_category_id);
 
   const handleChange = (
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -155,6 +170,9 @@ export const TransactionFormModal = ({
     const selectedPayment = paymentMethods.find(
       (pm) => pm.id === effectivePaymentMethodId
     );
+    const reimbursementCategoryId = isReimbursementIncome
+      ? form.reimbursement_category_id || null
+      : null;
 
     if (!form.amount || Number.isNaN(Number(form.amount))) {
       setError("Enter a valid amount.");
@@ -163,6 +181,11 @@ export const TransactionFormModal = ({
 
     if (!effectiveAccountId) {
       setError("Select an account to keep balances in sync.");
+      return;
+    }
+
+    if (isReimbursementIncome && !reimbursementCategoryId) {
+      setError("Select an expense category to offset.");
       return;
     }
 
@@ -184,7 +207,7 @@ export const TransactionFormModal = ({
         {
           notes: form.notes.trim() ? form.notes.trim() : null,
           type: form.type,
-          category_id: form.category_id || null,
+          category_id: isReimbursementIncome ? null : form.category_id || null,
           tags: baseTags,
         },
         rules
@@ -193,13 +216,15 @@ export const TransactionFormModal = ({
         type: form.type,
         date: form.date,
         amount: Number(form.amount),
-        category_id: ruled.category_id,
+        category_id: isReimbursementIncome ? null : ruled.category_id,
+        reimbursement_category_id: reimbursementCategoryId,
         payment_method_id: effectivePaymentMethodId || null,
         account_id: effectiveAccountId || null,
         notes: form.notes.trim() ? form.notes.trim() : null,
         tags: ruled.tags,
         is_transfer: form.is_transfer,
         is_recurring: form.is_recurring,
+        is_reimbursement: isReimbursementIncome,
       };
 
       if (transaction?.id) {
@@ -211,11 +236,13 @@ export const TransactionFormModal = ({
         await addTransaction(payload).unwrap();
       }
 
-      saveTransactionDefaults(userId, {
-        account_id: effectiveAccountId || "",
-        payment_method_id: effectivePaymentMethodId || "",
-        category_id: ruled.category_id ?? "",
-      });
+      if (!isReimbursementIncome) {
+        saveTransactionDefaults(userId, {
+          account_id: effectiveAccountId || "",
+          payment_method_id: effectivePaymentMethodId || "",
+          category_id: ruled.category_id ?? "",
+        });
+      }
       onClose();
     } catch {
       setError(
@@ -270,10 +297,18 @@ export const TransactionFormModal = ({
               ]}
               value={form.type}
               onChange={(value) =>
-                setForm((prev) => ({
-                  ...prev,
-                  type: (value ?? "expense") as "expense" | "income",
-                }))
+                setForm((prev) => {
+                  const nextType = (value ?? "expense") as "expense" | "income";
+                  if (nextType === "income") {
+                    return { ...prev, type: nextType };
+                  }
+                  return {
+                    ...prev,
+                    type: nextType,
+                    is_reimbursement: false,
+                    reimbursement_category_id: "",
+                  };
+                })
               }
               allowDeselect={false}
             />
@@ -303,14 +338,23 @@ export const TransactionFormModal = ({
               required
             />
             <Select
-              label="Category"
-              data={categoryOptions}
-              value={form.category_id || null}
+              label={isReimbursementIncome ? "Offset category" : "Category"}
+              data={isReimbursementIncome ? expenseCategoryOptions : categoryOptions}
+              value={
+                isReimbursementIncome
+                  ? form.reimbursement_category_id || null
+                  : form.category_id || null
+              }
               onChange={(value) =>
-                setForm((prev) => ({ ...prev, category_id: value ?? "" }))
+                setForm((prev) =>
+                  isReimbursementIncome
+                    ? { ...prev, reimbursement_category_id: value ?? "" }
+                    : { ...prev, category_id: value ?? "" }
+                )
               }
               placeholder="Select"
-              clearable
+              clearable={!isReimbursementIncome}
+              required={isReimbursementIncome}
             />
           </SimpleGrid>
           <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
@@ -355,13 +399,36 @@ export const TransactionFormModal = ({
                     onChange={handleChange}
                     placeholder="food, weekend, work"
                   />
+                  {form.type === "income" ? (
+                    <Checkbox
+                      label="This income is a reimbursement/refund"
+                      checked={form.is_reimbursement}
+                      onChange={(event) => {
+                        const checked = event.currentTarget.checked;
+                        setForm((prev) => ({
+                          ...prev,
+                          is_reimbursement: checked,
+                          is_transfer: checked ? false : prev.is_transfer,
+                          reimbursement_category_id: checked
+                            ? prev.reimbursement_category_id || prev.category_id || ""
+                            : "",
+                        }));
+                      }}
+                    />
+                  ) : null}
                   <Checkbox
-                    label="Exclude from budgets/income (transfer, reimbursement, internal move)"
+                    label="Exclude from budgets/income (transfer, internal move)"
                     checked={form.is_transfer}
                     onChange={(event) =>
                       setForm((prev) => ({
                         ...prev,
                         is_transfer: event?.currentTarget?.checked ?? false,
+                        is_reimbursement: event?.currentTarget?.checked
+                          ? false
+                          : prev.is_reimbursement,
+                        reimbursement_category_id: event?.currentTarget?.checked
+                          ? ""
+                          : prev.reimbursement_category_id,
                       }))
                     }
                   />

@@ -25,6 +25,7 @@ import {
   openPrintWindow,
   sumByType,
 } from "../lib/reports";
+import { getNetExpenseCategoryKey, getNetExpenseDelta } from "../lib/transactions";
 
 const INITIAL_RANGE = getDefaultReportRange();
 
@@ -76,25 +77,29 @@ export const Reports = () => {
   const expenseChange = buildChange(expenseTotal, prevExpense);
 
   const categoryTotals = new Map<string, number>();
-  currentTransactions
-    .filter((tx) => tx.type === "expense" && !tx.is_transfer)
-    .forEach((tx) => {
-      if (!tx.category_id) return;
-      categoryTotals.set(
-        tx.category_id,
-        (categoryTotals.get(tx.category_id) ?? 0) + tx.amount
-      );
-    });
+  currentTransactions.forEach((tx) => {
+    const delta = getNetExpenseDelta(tx);
+    if (delta === 0) {
+      return;
+    }
+    const key = getNetExpenseCategoryKey(tx);
+    if (!key) {
+      return;
+    }
+    categoryTotals.set(key, (categoryTotals.get(key) ?? 0) + delta);
+  });
   const pieData = buildPieData(categoryTotals, categoryMap).sort(
     (a, b) => b.value - a.value
   );
 
   const dailyTotals = new Map<string, number>();
-  currentTransactions
-    .filter((tx) => tx.type === "expense" && !tx.is_transfer)
-    .forEach((tx) => {
-      dailyTotals.set(tx.date, (dailyTotals.get(tx.date) ?? 0) + tx.amount);
-    });
+  currentTransactions.forEach((tx) => {
+    const delta = getNetExpenseDelta(tx);
+    if (delta === 0) {
+      return;
+    }
+    dailyTotals.set(tx.date, (dailyTotals.get(tx.date) ?? 0) + delta);
+  });
   const dailyData = buildDailyData(dailyTotals);
 
   const { data: trendData, series: trendSeries } = buildCategoryTrendData(

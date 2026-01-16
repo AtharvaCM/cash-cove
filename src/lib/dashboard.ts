@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import type { Budget, Category, Transaction } from "../types/finance";
+import { getNetExpenseCategoryKey, getNetExpenseDelta } from "./transactions";
 
 export type PieDatum = { name: string; value: number };
 export type DailyDatum = { day: string; value: number };
@@ -31,16 +32,19 @@ export const calculateDashboardMetrics = (
   const daily = new Map<string, number>();
   let spent = 0;
 
-  transactions
-    .filter((tx) => tx.type === "expense" && !tx.is_transfer)
-    .forEach((tx) => {
-      spent += tx.amount;
-      if (tx.category_id) {
-        totals.set(tx.category_id, (totals.get(tx.category_id) ?? 0) + tx.amount);
-      }
-      const dayKey = dayjs(tx.date).format("YYYY-MM-DD");
-      daily.set(dayKey, (daily.get(dayKey) ?? 0) + tx.amount);
-    });
+  transactions.forEach((tx) => {
+    const delta = getNetExpenseDelta(tx);
+    if (delta === 0) {
+      return;
+    }
+    spent += delta;
+    const categoryKey = getNetExpenseCategoryKey(tx);
+    if (categoryKey) {
+      totals.set(categoryKey, (totals.get(categoryKey) ?? 0) + delta);
+    }
+    const dayKey = dayjs(tx.date).format("YYYY-MM-DD");
+    daily.set(dayKey, (daily.get(dayKey) ?? 0) + delta);
+  });
 
   const overall = budgets.find((budget) => !budget.category_id)?.amount ?? null;
   const budgetMap = new Map<string, number>();
@@ -67,10 +71,12 @@ export const buildPieData = (
   categoryTotals: Map<string, number>,
   categoryMap: Map<string, string>
 ): PieDatum[] =>
-  Array.from(categoryTotals.entries()).map(([id, value]) => ({
-    name: categoryMap.get(id) ?? "Uncategorized",
-    value,
-  }));
+  Array.from(categoryTotals.entries())
+    .filter(([, value]) => value > 0)
+    .map(([id, value]) => ({
+      name: categoryMap.get(id) ?? "Uncategorized",
+      value,
+    }));
 
 export const buildDailyData = (dailyTotals: Map<string, number>): DailyDatum[] =>
   Array.from(dailyTotals.entries())
@@ -79,7 +85,7 @@ export const buildDailyData = (dailyTotals: Map<string, number>): DailyDatum[] =
       const parsed = dayjs(day);
       return {
         day: parsed.isValid() ? parsed.format("DD MMM") : day,
-        value,
+        value: Math.max(0, value),
       };
     });
 

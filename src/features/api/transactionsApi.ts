@@ -14,6 +14,8 @@ type TransactionRow = {
   account_id: string | null;
   notes_enc: string | null;
   is_transfer: boolean | null;
+  is_reimbursement: boolean | null;
+  reimbursement_category_id: string | null;
   is_recurring: boolean;
   transaction_tags?: Array<{ tags: Tag | Tag[] | null }>;
 };
@@ -85,11 +87,13 @@ const mapTransactionRows = async (rows: TransactionRow[]) =>
         date: row.date,
         amount: Number(row.amount),
         category_id: row.category_id,
+        reimbursement_category_id: row.reimbursement_category_id,
         payment_method_id: row.payment_method_id,
         account_id: row.account_id,
         notes: row.notes_enc ?? null,
         notes_enc: row.notes_enc,
         is_transfer: Boolean(row.is_transfer),
+        is_reimbursement: Boolean(row.is_reimbursement),
         is_recurring: row.is_recurring,
         tags,
       } as Transaction;
@@ -106,7 +110,7 @@ export const transactionsApi = apiSlice.injectEndpoints({
         const { data, error } = await supabase
           .from("transactions")
           .select(
-            "id, type, date, amount, category_id, payment_method_id, account_id, notes_enc, is_recurring, is_transfer, transaction_tags(tags(id, name))"
+            "id, type, date, amount, category_id, reimbursement_category_id, payment_method_id, account_id, notes_enc, is_recurring, is_transfer, is_reimbursement, transaction_tags(tags(id, name))"
           )
           .gte("date", start.format("YYYY-MM-DD"))
           .lte("date", end.format("YYYY-MM-DD"))
@@ -137,7 +141,7 @@ export const transactionsApi = apiSlice.injectEndpoints({
         const { data, error } = await supabase
           .from("transactions")
           .select(
-            "id, type, date, amount, category_id, payment_method_id, account_id, notes_enc, is_recurring, is_transfer, transaction_tags(tags(id, name))"
+            "id, type, date, amount, category_id, reimbursement_category_id, payment_method_id, account_id, notes_enc, is_recurring, is_transfer, is_reimbursement, transaction_tags(tags(id, name))"
           )
           .gte("date", start)
           .lte("date", end)
@@ -172,9 +176,11 @@ export const transactionsApi = apiSlice.injectEndpoints({
             ...input,
             notes_enc,
             is_transfer: input.is_transfer ?? false,
+            is_reimbursement: input.is_reimbursement ?? false,
+            reimbursement_category_id: input.reimbursement_category_id ?? null,
           })
           .select(
-            "id, type, date, amount, category_id, payment_method_id, account_id, notes_enc, is_recurring, is_transfer"
+            "id, type, date, amount, category_id, reimbursement_category_id, payment_method_id, account_id, notes_enc, is_recurring, is_transfer, is_reimbursement"
           )
           .single();
 
@@ -230,11 +236,13 @@ export const transactionsApi = apiSlice.injectEndpoints({
             date: inserted.date,
             amount: Number(inserted.amount),
             category_id: inserted.category_id,
+            reimbursement_category_id: inserted.reimbursement_category_id,
             payment_method_id: inserted.payment_method_id,
             account_id: inserted.account_id,
             notes: notes ?? null,
             notes_enc: inserted.notes_enc,
             is_transfer: inserted.is_transfer ?? false,
+            is_reimbursement: inserted.is_reimbursement ?? false,
             is_recurring: inserted.is_recurring,
             tags: linkedTags,
           },
@@ -258,10 +266,12 @@ export const transactionsApi = apiSlice.injectEndpoints({
             ...input,
             notes_enc,
             is_transfer: input.is_transfer ?? false,
+            is_reimbursement: input.is_reimbursement ?? false,
+            reimbursement_category_id: input.reimbursement_category_id ?? null,
           })
           .eq("id", id)
           .select(
-            "id, type, date, amount, category_id, payment_method_id, account_id, notes_enc, is_recurring, is_transfer"
+            "id, type, date, amount, category_id, reimbursement_category_id, payment_method_id, account_id, notes_enc, is_recurring, is_transfer, is_reimbursement"
           )
           .single();
 
@@ -350,11 +360,13 @@ export const transactionsApi = apiSlice.injectEndpoints({
             date: updated.date,
             amount: Number(updated.amount),
             category_id: updated.category_id,
+            reimbursement_category_id: updated.reimbursement_category_id,
             payment_method_id: updated.payment_method_id,
             account_id: updated.account_id,
             notes: notes ?? null,
             notes_enc: updated.notes_enc,
             is_transfer: updated.is_transfer ?? false,
+            is_reimbursement: updated.is_reimbursement ?? false,
             is_recurring: updated.is_recurring,
             tags: linkedTags,
           },

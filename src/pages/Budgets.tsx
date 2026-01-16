@@ -27,6 +27,7 @@ import { BudgetBulkModal } from "../components/budgets/BudgetBulkModal";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import type { Budget } from "../types/finance";
 import { useAppMonth } from "../context/AppMonthContext";
+import { getNetExpenseCategoryKey, getNetExpenseDelta } from "../lib/transactions";
 
 type BudgetRow = {
   id: string;
@@ -155,13 +156,17 @@ export const Budgets = () => {
   const spendMap = useMemo(() => {
     const map = new Map<string, number>();
     let overall = 0;
-    transactions
-      .filter((tx) => tx.type === "expense" && !tx.is_transfer)
-      .forEach((tx) => {
-        const key = tx.category_id ?? "overall";
-        map.set(key, (map.get(key) ?? 0) + tx.amount);
-        overall += tx.amount;
-      });
+    transactions.forEach((tx) => {
+      const delta = getNetExpenseDelta(tx);
+      if (delta === 0) {
+        return;
+      }
+      const key = getNetExpenseCategoryKey(tx);
+      if (key) {
+        map.set(key, (map.get(key) ?? 0) + delta);
+      }
+      overall += delta;
+    });
     map.set("overall", overall);
     return map;
   }, [transactions]);

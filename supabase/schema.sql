@@ -48,6 +48,8 @@ create table if not exists transactions (
   account_id uuid references accounts(id) on delete set null,
   notes_enc text,
   is_transfer boolean default false,
+  is_reimbursement boolean default false,
+  reimbursement_category_id uuid references categories(id) on delete set null,
   is_recurring boolean default false,
   created_at timestamptz default now()
 );

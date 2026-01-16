@@ -1,5 +1,10 @@
 import dayjs from "dayjs";
 import type { Tag, Transaction } from "../types/finance";
+import {
+  getIncomeDelta,
+  getNetExpenseCategoryKey,
+  getNetExpenseDelta,
+} from "./transactions";
 
 export type WeeklyDatum = {
   week: string;
@@ -88,33 +93,38 @@ export const calculateCashflowMetrics = ({
   }));
 
   transactions.forEach((tx) => {
-    if (tx.is_transfer) {
-      return;
-    }
     const dayIndex = dayjs(tx.date).date();
     const weekIndex = Math.floor((dayIndex - 1) / 7);
     const bucket = weekly[weekIndex];
     if (!bucket) {
       return;
     }
-    const categoryKey = tx.category_id ?? "uncategorized";
-
-    if (tx.type === "income") {
-      income += tx.amount;
+    const incomeDelta = getIncomeDelta(tx);
+    if (incomeDelta !== 0) {
+      income += incomeDelta;
       incomeItems += 1;
-      bucket.income += tx.amount;
+      bucket.income += incomeDelta;
+      const incomeCategoryKey = tx.category_id ?? "uncategorized";
       incomeByCategory.set(
-        categoryKey,
-        (incomeByCategory.get(categoryKey) ?? 0) + tx.amount
+        incomeCategoryKey,
+        (incomeByCategory.get(incomeCategoryKey) ?? 0) + incomeDelta
       );
-    } else {
-      expense += tx.amount;
-      expenseItems += 1;
-      bucket.expense += tx.amount;
-      expensesByCategory.set(
-        categoryKey,
-        (expensesByCategory.get(categoryKey) ?? 0) + tx.amount
-      );
+    }
+
+    const expenseDelta = getNetExpenseDelta(tx);
+    if (expenseDelta !== 0) {
+      expense += expenseDelta;
+      if (tx.type === "expense") {
+        expenseItems += 1;
+      }
+      bucket.expense += expenseDelta;
+      const expenseCategoryKey = getNetExpenseCategoryKey(tx);
+      if (expenseCategoryKey) {
+        expensesByCategory.set(
+          expenseCategoryKey,
+          (expensesByCategory.get(expenseCategoryKey) ?? 0) + expenseDelta
+        );
+      }
     }
   });
 
@@ -123,6 +133,7 @@ export const calculateCashflowMetrics = ({
   });
 
   const topExpense = Array.from(expensesByCategory.entries())
+    .filter(([, value]) => value > 0)
     .map(([id, value]) => ({
       id,
       name: categoryMap.get(id) ?? "Uncategorized",

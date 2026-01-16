@@ -37,6 +37,7 @@ import { ActiveFilterChips, type ActiveFilterChip } from "../components/filters/
 import { loadSavedFilters, saveSavedFilters, type SavedFilter } from "../lib/savedFilters";
 import { useAppSelector } from "../app/hooks";
 import { useAppMonth } from "../context/AppMonthContext";
+import { getDisplayCategoryId } from "../lib/transactions";
 
 type TransactionRow = {
   id: string;
@@ -49,15 +50,24 @@ type TransactionRow = {
   amount: number;
   type: Transaction["type"];
   isTransfer: boolean;
+  isReimbursement: boolean;
 };
 
 const TransactionTypeCell = (params: ICellRendererParams<TransactionRow>) => {
   const isTransfer = params.data?.isTransfer;
+  const isReimbursement = params.data?.isReimbursement;
   const type = params.data?.type ?? "expense";
   if (isTransfer) {
     return (
       <Badge variant="light" color="gray" radius="sm">
         Transfer
+      </Badge>
+    );
+  }
+  if (isReimbursement) {
+    return (
+      <Badge variant="light" color="blue" radius="sm">
+        Reimbursement
       </Badge>
     );
   }
@@ -169,8 +179,9 @@ export const Transactions = () => {
       if (!searchTerm) {
         return true;
       }
-      const categoryLabel = tx.category_id
-        ? categoryMap.get(tx.category_id) ?? ""
+      const displayCategoryId = getDisplayCategoryId(tx);
+      const categoryLabel = displayCategoryId
+        ? categoryMap.get(displayCategoryId) ?? ""
         : "uncategorized";
       const accountLabel = tx.account_id
         ? accountMap.get(tx.account_id) ?? ""
@@ -202,9 +213,13 @@ export const Transactions = () => {
       filteredTransactions.map((tx) => ({
         id: tx.id,
         date: dayjs(tx.date).format("DD MMM"),
-        category: tx.category_id
-          ? categoryMap.get(tx.category_id) ?? tx.category_id
-          : "Uncategorized",
+        category: (() => {
+          const displayCategoryId = getDisplayCategoryId(tx);
+          if (!displayCategoryId) {
+            return "Uncategorized";
+          }
+          return categoryMap.get(displayCategoryId) ?? displayCategoryId;
+        })(),
         account: accountMap.get(tx.account_id ?? "") ?? "-",
         payment: paymentMap.get(tx.payment_method_id ?? "") ?? "-",
         notes: tx.notes?.trim() ?? "",
@@ -212,6 +227,7 @@ export const Transactions = () => {
         amount: tx.amount,
         type: tx.type,
         isTransfer: Boolean(tx.is_transfer),
+        isReimbursement: Boolean(tx.is_reimbursement),
       })),
     [filteredTransactions, categoryMap, paymentMap, accountMap]
   );
